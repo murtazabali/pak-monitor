@@ -8,7 +8,7 @@ export const SITE_DESCRIPTION =
   "Live news monitor for Pakistani cities. Pick cities and watch everything happening there — crime, politics, weather and business — stream in, in real time, aggregated from Pakistan's top outlets.";
 
 // Public contact address shown on the Contact page (required for AdSense).
-export const CONTACT_EMAIL = "murti_52@live.com";
+export const CONTACT_EMAIL = "murtaza_fakhruddin@outlook.com";
 
 // Google AdSense publisher ID.
 export const ADSENSE_CLIENT = "ca-pub-9118158293508962";

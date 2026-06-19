@@ -12,9 +12,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }));
 
+  const staticPages: MetadataRoute.Sitemap = ["about", "privacy", "contact"].map(
+    (slug) => ({
+      url: `${SITE_URL}/${slug}`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.3,
+    }),
+  );
+
   return [
     { url: SITE_URL, lastModified: now, changeFrequency: "hourly", priority: 1 },
     { url: `${SITE_URL}/digest`, lastModified: now, changeFrequency: "hourly", priority: 0.7 },
     ...cityPages,
+    ...staticPages,
   ];
 }

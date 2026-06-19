@@ -6,6 +6,9 @@ import type { Article, Stats } from "@/lib/types";
 import { CATEGORY_BY_SLUG } from "@/config/categories";
 import ArticleCard from "@/app/components/ArticleCard";
 import Sparkline from "@/app/components/Sparkline";
+import SiteFooter from "@/app/components/SiteFooter";
+import AdUnit from "@/app/components/AdUnit";
+import { ADSENSE_SLOTS } from "@/config/site";
 
 export default function CityView({
   slug,
@@ -88,6 +91,11 @@ export default function CityView({
         ) : (
           articles.map((a) => <ArticleCard key={a.id} article={a} now={now} />)
         )}
+      </div>
+
+      <AdUnit slot={ADSENSE_SLOTS.article} className="my-6 block" />
+      <div className="mt-8">
+        <SiteFooter />
       </div>
     </div>
   );

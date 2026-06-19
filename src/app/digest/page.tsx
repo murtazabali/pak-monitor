@@ -7,6 +7,9 @@ import { isLocalArticle } from "@/lib/relevance";
 import { CITY_BY_SLUG } from "@/config/cities";
 import { CATEGORY_BY_SLUG } from "@/config/categories";
 import { sourceColor } from "@/config/sources";
+import SiteFooter from "@/app/components/SiteFooter";
+import AdUnit from "@/app/components/AdUnit";
+import { ADSENSE_SLOTS } from "@/config/site";
 
 export const dynamic = "force-dynamic";
 
@@ -133,6 +136,11 @@ export default async function DigestPage({
           </div>
         </div>
       </section>
+
+      <AdUnit slot={ADSENSE_SLOTS.article} className="my-6 block" />
+      <div className="mt-8">
+        <SiteFooter />
+      </div>
     </div>
   );
 }

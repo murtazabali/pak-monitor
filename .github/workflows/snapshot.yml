@@ -24,6 +24,9 @@ concurrency:
 jobs:
   snapshot:
     runs-on: ubuntu-latest
+    # Safety net: a healthy run is ~2-3 min. Fail fast instead of hanging for
+    # hours (and blocking the concurrency group) if a feed/process ever stalls.
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

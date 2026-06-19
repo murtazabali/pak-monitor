@@ -24,7 +24,13 @@ async function main() {
   console.log(`[snapshot] wrote ${articles.length} articles (added ${added}) → public/data/snapshot.json`);
 }
 
-main().catch((err) => {
-  console.error("[snapshot] failed:", err);
-  process.exit(1);
-});
+// Force-exit on success: feed fetches leave keep-alive sockets open, which keep
+// Node's event loop alive and would otherwise hang the process (and the CI step)
+// long after the snapshot is written. The file is written synchronously above,
+// so exiting here loses nothing.
+main()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error("[snapshot] failed:", err);
+    process.exit(1);
+  });

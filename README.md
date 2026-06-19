@@ -1,195 +1,140 @@
+<div align="center">
+
 # 🛰️ Pak Monitor
 
-**A realtime news monitor for Pakistan.** Pick one or more cities and watch everything happening there stream in live — on a glowing map of Pakistan and a realtime feed. Default city is **Karachi**.
+### Realtime news monitor for Pakistan — a glowing map + live feed of everything happening across the country's cities.
 
-[![CI](https://github.com/murtazabali/pak-monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/murtazabali/pak-monitor/actions/workflows/ci.yml)
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/murtazabali/pak-monitor)
+[![Live](https://img.shields.io/badge/▶_live-pak--monitor.netlify.app-22d3ee?style=for-the-badge)](https://pak-monitor.netlify.app)
+&nbsp;
+[![CI](https://img.shields.io/github/actions/workflow/status/murtazabali/pak-monitor/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/murtazabali/pak-monitor/actions/workflows/ci.yml)
+&nbsp;
+[![License: MIT](https://img.shields.io/badge/license-MIT-22d3ee?style=for-the-badge)](LICENSE)
 
-No API keys. No accounts. No database server. Just:
+<br/>
 
-```bash
-git clone https://github.com/murtazabali/pak-monitor.git
-cd pak-monitor
-nvm use            # uses Node 25 (see .nvmrc); Node 20+ works
-npm install        # pure-JS deps — no native build step
-npm run dev        # open http://localhost:3000
-```
+<a href="https://pak-monitor.netlify.app">
+  <img src="docs/dashboard.png" width="880" alt="Pak Monitor dashboard — live map of Pakistan with a realtime news feed" />
+</a>
+
+</div>
 
 ---
 
+Pick one or more cities and watch everything happening there stream in — on a live map of Pakistan and a realtime feed, grouped by story and tagged by topic. **Aggregated from ~25 Pakistani outlets, no API keys, no account.** Default city is **Karachi**.
+
+<table>
+  <tr>
+    <td width="33%"><a href="https://pak-monitor.netlify.app"><img src="docs/stats.png" alt="Statistics drawer" /></a></td>
+    <td width="33%"><a href="https://pak-monitor.netlify.app/city/karachi"><img src="docs/city.png" alt="Karachi city page" /></a></td>
+    <td width="33%"><a href="https://pak-monitor.netlify.app/digest"><img src="docs/digest.png" alt="24-hour digest" /></a></td>
+  </tr>
+  <tr align="center">
+    <td>📊 Scoped statistics drawer</td>
+    <td>🏙️ Per-city pages</td>
+    <td>📰 24-hour digest</td>
+  </tr>
+</table>
+
 ## ✨ Features
 
-- **Live map of Pakistan** — every monitored city is a node that **pulses when fresh news lands**. Click a node to filter.
-- **Realtime feed** over Server-Sent Events — new stories prepend themselves the moment they're ingested. Pause / resume with a "N new" pill.
-- **Story clustering** — the same event across outlets is grouped into one card with a **"N outlets reporting"** badge, plus a **🔥 Trending** strip of the most-reported stories.
-- **City filtering** — multi-select chips (Karachi by default) or a whole **province**. Articles match by city name + known neighborhoods/landmarks (Karachi ⇒ Clifton, Saddar, Korangi…), in English **and Urdu**.
-- **Filters** — keyword **category tags** (politics/crime/weather/accident/business/sports/health), **source** filter, **date range** (rolling 24h/7d/30d or custom), and instant **search**.
-- **Watchlist + alerts** — track keywords (highlighted in the feed) and opt into **browser notifications** + a sound ping for breaking news in your cities.
-- **Read tracking** — mark-as-read, unread counts, hide-read.
-- **Stats panel** — per-hour sparkline, top cities/categories/sources, a keyword cloud, and live **feed health**.
-- **City pages** — `/city/karachi` with that city's feed and mini-stats.
-- **Shareable URLs** + **saved views** — filters live in the query string (any view is a link), and you can name/recall presets. **CSV export** of the current view.
-- **Output & integrations** — subscribe to any filtered view as **RSS** (`/api/rss`), read a **daily digest** at `/digest`, and push breaking news to a **webhook** (Slack / Discord / generic).
-- **Signal extras** — **activity-spike** alerts when a city jumps vs its baseline, keyword **sentiment** tone, **entity** extraction ("who's in the news"), and a **PK-only** relevance filter to cut foreign noise.
-- **Keyboard navigation** — `j`/`k` to move, `o`/Enter to open, `/` to search.
-- **PWA** — installable, with an offline app shell.
-- **~24 sources, no keys** — Dawn, The News, Express Tribune, Geo News, ARY News, Business Recorder, The Nation, BBC Urdu, Express Urdu, **+ per-city Google News** for wide local coverage.
-- **Dark "intel command-center" aesthetic.**
+- **🗺️ Live map of Pakistan** — every monitored city is a node that **pulses when fresh news lands**. Click a node to filter.
+- **📡 Auto-refreshing feed** — new stories appear as the data refreshes; pause / resume any time.
+- **🔗 Story clustering** — the same event across outlets is grouped into one card with a **"N outlets reporting"** badge, plus a **🔥 Trending** strip of the most-reported stories.
+- **🏙️ City & province filtering** — multi-select chips (Karachi by default). Articles match by city name + known neighborhoods/landmarks (Karachi ⇒ Clifton, Saddar, Korangi…), in English **and Urdu**.
+- **🎛️ Rich filters** — category tags (politics/crime/weather/accident/business/sports/health), source filter, date range (rolling 24h/7d/30d or custom), and instant search.
+- **⭐ Watchlist + alerts** — track keywords (highlighted in the feed) and opt into browser notifications + a sound ping for breaking news.
+- **📊 Stats drawer** — per-hour sparkline, top cities/categories/sources, a keyword cloud and "most mentioned" entities — all **scoped to your current selection**.
+- **🧾 Outputs** — a 24-hour **[digest](https://pak-monitor.netlify.app/digest)**, per-city pages (`/city/karachi`), **CSV export**, **saved views**, and **shareable URLs** (every filter lives in the query string).
+- **🔬 Signal extras** — activity-spike alerts, sentiment tone, entity extraction, and a PK-only relevance filter to cut foreign noise.
+- **⌨️ Keyboard nav** (`j`/`k`/`o`/`/`) · **📱 installable PWA** · **🌑 dark "intel command-center" aesthetic.**
+
+## 🏗️ How it works — a static site with **zero backend**
+
+A browser can't fetch news RSS directly (CORS), so the feeds are pulled **off-browser by a free GitHub Action**, baked into a JSON snapshot, and served from GitHub's CDN. The deployed site is **100% static — no servers, no functions, no database.**
+
+```
+   ┌─ GitHub Actions · every ~5 min · free ───────────────────────────┐
+   │   fetch ~25 RSS feeds (server-side, browser UA, fault-isolated)   │
+   │   normalize · tag cities · classify topics · cluster stories      │
+   │   write snapshot.json  ──▶  force-push to the orphan `data` branch │
+   └──────────────────────────────────────────────┬───────────────────┘
+                                                   │ (single commit, no history growth)
+                                                   ▼
+        raw.githubusercontent.com/…/data/snapshot.json   ← GitHub CDN, CORS-enabled
+                                                   │
+                                                   ▼
+        Static site on Netlify  ──reads──▶  snapshot.json
+        dashboard · city pages · digest  (all rendered in the browser)
+```
+
+Because data refreshes live on a separate `data` branch (force-pushed as one commit), **Netlify only ever rebuilds when the code changes** — data updates cost nothing and never bloat git history.
 
 ## 🧱 Tech stack
 
 | Concern | Choice |
 |---|---|
-| Framework | Next.js 15 (App Router) + React 19 + TypeScript |
+| Framework | Next.js 15 (App Router, **static export**) + React 19 + TypeScript |
 | Styling | Tailwind CSS |
-| Realtime | Server-Sent Events + an in-process event bus |
-| Storage | [lowdb](https://github.com/typicode/lowdb) (embedded JSON — zero native deps) |
-| Ingestion | `rss-parser`, polled on a background loop started via `instrumentation.ts` |
+| Data | Prebuilt JSON snapshot, refreshed by **GitHub Actions**, served from GitHub's CDN |
+| Ingestion | `rss-parser` (runs in CI, never at request time) |
 | Map | `d3-geo` + a bundled Pakistan GeoJSON (renders fully offline) |
-| Tests | Playwright |
+| Hosting | Netlify — static, **zero serverless functions** |
+| Tests | Vitest (unit) + Playwright (E2E) |
 
-Everything runs in **one Node process**. There is no external service to stand up.
+## 🚀 Run it locally
 
-## 🛠️ How it works
+No API keys. No accounts. No database. The repo ships with a seed snapshot, so it works the moment you clone it:
 
-```
-instrumentation.register()  ─▶  poller (every ~90s)
-                                 ├─ fetch all enabled RSS feeds (browser UA, fault-isolated)
-                                 ├─ normalize → hash id, strip HTML, extract image, date fallback
-                                 ├─ tag cities (name + localities) + classify categories
-                                 ├─ store in lowdb (dedup + rolling 2000-item window)
-                                 └─ emit each new article on the event bus
-                                          │
-        GET /api/articles?cities=…  ◀─────┤  (JSON backlog for first paint)
-        GET /api/stream?cities=…    ◀─────┘  (SSE — server-side filtered live push)
+```bash
+git clone https://github.com/murtazabali/pak-monitor.git
+cd pak-monitor
+nvm use            # Node 25 (see .nvmrc); Node 20+ works
+npm install        # pure-JS deps, no native build step
+npm run dev        # open http://localhost:3000
 ```
 
-The browser only ever talks to this app's own `/api/*` routes, so there are **no CORS issues** — feeds are fetched server-side.
+Want fresh data locally? `npm run snapshot` re-fetches every feed and rewrites `public/data/snapshot.json`.
 
-## ⚙️ Configuration
+```bash
+npm run build      # static export → out/
+npm run test:unit  # fast Vitest unit tests
+npm test           # Playwright E2E (boots a dev server automatically)
+```
 
-### Add or remove a city
+## ⚙️ Customize
 
-Edit [`src/config/cities.ts`](src/config/cities.ts) and append:
+**Add a city** — append to [`src/config/cities.ts`](src/config/cities.ts); it instantly becomes a filter chip + map node and starts tagging articles:
 
 ```ts
-{
-  slug: "gujranwala",
-  name: "Gujranwala",
-  province: "Punjab",
-  lat: 32.1877,
-  lng: 74.1945,
-  localities: ["g.t. road", "satellite town", "model town", "sheikhupura road"],
-}
+{ slug: "gujranwala", name: "Gujranwala", province: "Punjab", lat: 32.1877, lng: 74.1945,
+  localities: ["g.t. road", "satellite town", "model town"] }
 ```
 
-It instantly becomes a filter chip and a map node, and starts tagging articles. **Tip:** prefer *distinctive* localities — generic names shared between cities are best left out (the city name itself is always matched).
+> **Tip:** prefer *distinctive* localities — generic names shared between cities are best left out (the city name itself is always matched).
 
-### Add or remove a feed
-
-Edit [`src/config/feeds.ts`](src/config/feeds.ts) and append:
+**Add a feed** — append to [`src/config/feeds.ts`](src/config/feeds.ts):
 
 ```ts
 { id: "my-source", name: "Section", outlet: "My Outlet", url: "https://example.com/feed", enabled: true }
 ```
 
-A few outlets (Samaa, Pakistan Today, Daily Times) are included but **disabled** because they block some fetchers at the CDN; flip `enabled: true` to try them — the poller already sends a browser User-Agent.
+**Sources (~25, no keys):** Dawn, The News, Express Tribune, Geo News, ARY News, Business Recorder, The Nation, ProPakistani, BBC Urdu, Express Urdu, **+ per-city Google News** for wide local coverage.
 
-### Environment
-
-| Variable | Default | Meaning |
-|---|---|---|
-| `POLL_INTERVAL_MS` | `90000` | How often (ms) to poll all feeds. |
-| `GOOGLE_NEWS` | `on` | Set to `off` to disable the per-city Google News feeds. |
-| `PORT` | `3000` | Port for the dev/prod server. |
-| `ALERT_WEBHOOK_URL` | — | Incoming webhook URL for breaking-news alerts (enables webhooks). |
-| `ALERT_WEBHOOK_FORMAT` | auto | `slack` \| `discord` \| `json` (auto-detected from the URL by default). |
-| `ALERT_CITIES` | all | Comma-separated city slugs to alert on. |
-| `ALERT_CATEGORIES` | `crime,accident` | Comma-separated categories to alert on. |
-
-### Outputs
-
-- **RSS** — `/api/rss?cities=karachi&categories=crime` — a filtered feed for any reader.
-- **Digest** — `/digest?cities=karachi` — a 24-hour summary page (top stories, spikes, breakdowns).
-- **Webhooks** — set `ALERT_WEBHOOK_URL` to a Slack/Discord incoming webhook (or any endpoint) and matching breaking news is posted there each poll cycle.
-
-See [`.env.example`](.env.example).
-
-## ✅ Testing
-
-```bash
-npm run test:unit   # fast Vitest unit tests (tagger, classifier, clustering, …)
-npm test            # Playwright E2E suite (boots a dev server automatically)
-npm run test:headed # watch the E2E run in a browser
-```
-
-Unit tests cover the pure logic; the E2E suite covers the real API + SSE stack and the UI (UI tests mock the API so they're deterministic and pass offline). Both run in CI.
-
-## 📦 Production
-
-```bash
-npm run build
-npm start
-```
-
-Or with Docker:
-
-```bash
-docker build -t pak-monitor .
-docker run -p 3000:3000 pak-monitor
-# with webhook alerts:
-docker run -p 3000:3000 -e ALERT_WEBHOOK_URL=https://hooks.slack.com/... pak-monitor
-```
-
-> **Scaling note:** the realtime fan-out uses an in-process event bus, which is perfect for a single instance. To run multiple instances behind a load balancer, swap the bus in [`src/lib/bus.ts`](src/lib/bus.ts) for a shared pub/sub (e.g. Redis) and lowdb in [`src/lib/db.ts`](src/lib/db.ts) for a real database — both are isolated behind small modules.
-
-## 🚀 Deploying
-
-You only need a server because **browsers can't read cross-origin RSS feeds (CORS)** — the feeds must be fetched off-browser. But you don't need an *always-on* server or a database. Three modes, selected by env vars:
-
-| Mode | Best host | Ingestion | Reads | Realtime |
-|---|---|---|---|---|
-| **Always-on** (default) | Render / Railway / Fly / VPS / Docker | in-process poller | live API + lowdb | SSE (instant) |
-| **Serverless** | Netlify / Vercel | scheduled fn → `/api/ingest` | live API + Blobs | client polling |
-| **Static-JSON** | anywhere (incl. static hosts) | cron → `snapshot.json` | a static file | client polling |
-
-**Knobs:** `STORAGE` (`lowdb`\|`blobs`), `NEXT_PUBLIC_REALTIME` (`sse`\|`poll`), `NEXT_PUBLIC_DATA_SOURCE` (`api`\|`static`), plus the universal **`/api/ingest`** endpoint (protect it with `CRON_SECRET`) that any scheduler can call.
-
-### Netlify (serverless)
-
-1. Connect the repo to Netlify (it auto-detects Next.js).
-2. In **Site configuration → Environment variables**, add these — they must be set **here, not in `netlify.toml`**, because `[build.environment]` is build-time only and won't reach the functions at runtime:
-
-   | Variable | Value |
-   |---|---|
-   | `STORAGE` | `blobs` |
-   | `DISABLE_POLLER` | `1` |
-   | `NEXT_PUBLIC_REALTIME` | `poll` |
-   | `GOOGLE_NEWS` | `off` |
-   | `RSS_TIMEOUT_MS` | `6000` |
-   | `CRON_SECRET` | a random string (`openssl rand -hex 32`) |
-
-3. Redeploy. The scheduled function pings `/api/ingest` every 2 min to refresh data in **Netlify Blobs**; the dashboard polls `/api/articles`. Seed it once without waiting: `curl -H "x-cron-secret: <secret>" https://<your-site>/api/ingest`.
-
-### Static-JSON (no live backend)
-
-1. A cron regenerates the data file: `npm run snapshot` writes `public/data/snapshot.json`. The included [`.github/workflows/snapshot.yml`](.github/workflows/snapshot.yml) does this on a schedule and commits it.
-2. Build/host with `NEXT_PUBLIC_DATA_SOURCE=static`; the dashboard polls the snapshot — no live ingestion or DB needed.
-
-> The static mode powers the **dashboard**. The **city pages** and **digest** read live data, so they need the always-on or serverless mode (or live ingestion). Committing the snapshot adds repo churn — lower the cron cadence or push it to a CDN/Blob if that matters.
+**Snapshot cadence:** the refresh interval lives in [`.github/workflows/snapshot.yml`](.github/workflows/snapshot.yml) (`cron`). GitHub's scheduled runs are best-effort, so expect a refresh every ~5–15 min.
 
 ## 🗂️ Project structure
 
 ```
 src/
-├── instrumentation.ts        # starts the poller on server boot (Node runtime only)
 ├── config/{feeds,cities,categories}.ts   # ← edit these to customize
-├── lib/                      # poller, rss, normalize, cityTagger, classifier, db, bus
-├── data/pakistan.geo.json    # offline map outline
+├── lib/        # rss, normalize, cityTagger, classifier, cluster, stats, db
+├── data/pakistan.geo.json                # offline map outline
 └── app/
-    ├── api/{articles,stream}/route.ts     # backlog + SSE
-    └── components/           # Dashboard, PakistanMap, CityChips, FeedList, …
-tests/                        # Playwright specs
+    ├── page.tsx · city/[slug] · digest   # static pages, read the snapshot
+    └── components/                        # Dashboard, PakistanMap, FeedList, …
+scripts/snapshot.ts                        # generates public/data/snapshot.json (run in CI)
+.github/workflows/snapshot.yml             # the ~5-min data refresh
+tests/                                     # Vitest unit + Playwright E2E
 ```
 
 ## 📜 License

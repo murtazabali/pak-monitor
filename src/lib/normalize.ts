@@ -72,7 +72,11 @@ function parseDate(item: RawItem, fallbackISO: string): string {
   const raw = item.isoDate || item.pubDate;
   if (raw) {
     const d = new Date(raw);
-    if (!Number.isNaN(d.getTime())) return d.toISOString();
+    // Ignore unparseable or clearly-wrong future dates (parse errors / bad feeds),
+    // which would otherwise pin an item to the top of a newest-first feed.
+    if (!Number.isNaN(d.getTime()) && d.getTime() <= Date.now() + 3_600_000) {
+      return d.toISOString();
+    }
   }
   return fallbackISO;
 }

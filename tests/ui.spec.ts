@@ -5,6 +5,8 @@ import type { Article } from "../src/lib/types";
 // "now" so that the "Today" date preset always includes these in the browser's
 // local timezone, regardless of where the tests run.
 const NOW = new Date().toISOString();
+const DAY_MS = 86_400_000;
+const isoAt = (deltaMs: number) => new Date(Date.parse(NOW) + deltaMs).toISOString();
 
 function makeArticle(over: Partial<Article> & Pick<Article, "id" | "title">): Article {
   return {
@@ -176,6 +178,40 @@ test.describe("Dashboard UI", () => {
     await page.goto("/");
     await page.getByTitle("Pause live feed").click();
     await expect(page.getByText("Paused")).toBeVisible();
+  });
+
+  test("flushing the 'new' pill keeps the feed newest-first", async ({ page }) => {
+    const A = makeArticle({ id: "ord-a", title: "Provincial assembly debate concludes", publishedAt: isoAt(-2 * DAY_MS) });
+    const B = makeArticle({ id: "ord-b", title: "Cricket squad announced for tour", publishedAt: isoAt(0) });
+    const C = makeArticle({ id: "ord-c", title: "Rupee gains versus dollar markets", publishedAt: isoAt(-5 * DAY_MS) });
+
+    await page.route("**/api/articles**", (route) =>
+      route.fulfill({ json: { articles: [A], counts: { karachi: 1 }, count: 1 } }),
+    );
+    await page.route("**/api/stats**", (route) =>
+      route.fulfill({ json: { total: 1, byCity: {}, byCategory: {}, bySource: {}, perHour: [], topKeywords: [], topEntities: [], spikes: [] } }),
+    );
+    // Delay the stream so we can pause before B and C arrive (they then buffer).
+    await page.route("**/api/stream**", async (route) => {
+      await new Promise((res) => setTimeout(res, 1200));
+      await route.fulfill({
+        status: 200,
+        headers: { "content-type": "text/event-stream; charset=utf-8", "cache-control": "no-cache" },
+        body: sseBody(B, C),
+      });
+    });
+
+    await page.goto("/");
+    await expect(page.getByText(A.title)).toBeVisible();
+
+    await page.getByTitle("Pause live feed").click();
+    const pill = page.getByText(/new article/);
+    await expect(pill).toBeVisible();
+    await pill.click();
+
+    // After flushing, the feed must be newest-first: B (now), A (-2d), C (-5d).
+    const titles = (await page.locator("a.clamp-3").allTextContents()).map((t) => t.trim());
+    expect(titles).toEqual([B.title, A.title, C.title]);
   });
 
   test("same-story headlines cluster with an 'outlets reporting' badge", async ({ page }) => {

@@ -317,7 +317,7 @@ export default function Dashboard() {
     const srcs = new Set(selectedSources);
     const needle = query.trim().toLowerCase();
     const { fromMs, toMs } = windowFor(dateRange, nowTick);
-    return articles.filter((a) => {
+    const filtered = articles.filter((a) => {
       if (localOnly && !isLocalArticle(a)) return false;
       if (cats.size && !a.categories.some((c) => cats.has(c))) return false;
       if (srcs.size && !srcs.has(a.source)) return false;
@@ -330,6 +330,10 @@ export default function Dashboard() {
       }
       return true;
     });
+    // Always render newest-first — live prepends, the pause buffer flush, and
+    // poll merges can otherwise disturb the order.
+    filtered.sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
+    return filtered;
   }, [articles, selectedCategories, selectedSources, query, dateRange, nowTick, hideRead, readSet, localOnly]);
 
   const clusters = useMemo(

@@ -89,6 +89,7 @@ export default function Dashboard() {
   const [nowTick, setNowTick] = useState(() => Date.now());
   const [statsOpen, setStatsOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useLocalStorage<boolean>("pak-monitor:map", true);
   const [spikes, setSpikes] = useState<Stats["spikes"]>([]);
   const [snapshotStats, setSnapshotStats] = useState<Stats | null>(null);
   const [cursor, setCursor] = useState(0);
@@ -542,13 +543,27 @@ export default function Dashboard() {
       <TrendingStrip clusters={clusters} onOpen={markRead} />
 
       {/* Main */}
-      <main className="grid min-h-0 flex-1 grid-rows-[minmax(200px,36%)_1fr] lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:grid-rows-1">
+      <main
+        className={[
+          "grid min-h-0 flex-1",
+          mapOpen
+            ? "grid-rows-[minmax(180px,36%)_1fr] lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:grid-rows-1"
+            : "grid-rows-1 lg:grid-cols-1",
+        ].join(" ")}
+      >
         {/* Map panel */}
-        <section className="grid-bg relative min-h-0 border-b border-edge/70 lg:border-b-0 lg:border-r">
+        <section className={`grid-bg relative min-h-0 border-b border-edge/70 lg:border-b-0 lg:border-r ${mapOpen ? "" : "hidden"}`}>
           <div className="absolute left-4 top-3 z-10">
             <p className="font-mono text-[10px] uppercase tracking-widest text-muted">Live map</p>
             <p className="max-w-[16rem] truncate text-sm font-medium text-slate-200">{scopeLabel}</p>
           </div>
+          <button
+            onClick={() => setMapOpen(false)}
+            title="Hide map"
+            className="absolute right-3 top-3 z-10 rounded-md border border-base-600 bg-base-900/70 px-2 py-1 text-xs text-muted hover:text-accent"
+          >
+            ⊟ Hide
+          </button>
           <div className="h-full w-full p-2">
             <PakistanMap
               cities={CITIES}
@@ -565,6 +580,14 @@ export default function Dashboard() {
 
         {/* Feed panel */}
         <section className="flex min-h-0 flex-col bg-base-900/40">
+          {!mapOpen && (
+            <button
+              onClick={() => setMapOpen(true)}
+              className="flex w-full items-center gap-1.5 border-b border-edge/60 px-4 py-1.5 text-xs text-muted hover:text-accent"
+            >
+              🗺 Show map
+            </button>
+          )}
           <div className="border-b border-edge/60">
             {/* Mobile-only toggle to reclaim feed space */}
             <button

@@ -6,6 +6,7 @@ import type { Article, Stats } from "@/lib/types";
 import { clusterArticles, type Cluster } from "@/lib/cluster";
 import { articlesToCsv, download } from "@/lib/csv";
 import { isLocalArticle } from "@/lib/relevance";
+import { computeStats } from "@/lib/stats";
 import PakistanMap from "./PakistanMap";
 import CityChips from "./CityChips";
 import CategoryFilter from "./CategoryFilter";
@@ -478,6 +479,20 @@ export default function Dashboard() {
             : "All time";
   const statsWindow = windowFor(dateRange, nowTick);
 
+  // Static mode has no /api/stats: compute the drawer's stats client-side from
+  // the in-memory snapshot, scoped to the selected cities + period, so the
+  // numbers match the visible feed instead of the global snapshot totals. Only
+  // computed while the drawer is open.
+  const scopedStats = useMemo<Stats | null>(() => {
+    if (DATA_SOURCE !== "static" || !statsOpen) return null;
+    return computeStats(
+      articles,
+      selectedCities,
+      msToIso(statsWindow.fromMs),
+      msToIso(statsWindow.toMs),
+    );
+  }, [statsOpen, articles, selectedCities, statsWindow.fromMs, statsWindow.toMs]);
+
   const activeFilterCount =
     selectedCategories.length +
     selectedSources.length +
@@ -734,7 +749,7 @@ export default function Dashboard() {
         from={msToIso(statsWindow.fromMs)}
         to={msToIso(statsWindow.toMs)}
         scope={`${scopeLabel} · ${periodLabel}`}
-        stats={DATA_SOURCE === "static" ? snapshotStats : undefined}
+        stats={DATA_SOURCE === "static" ? scopedStats : undefined}
         onEntityClick={(name) => setQuery(name)}
       />
     </div>

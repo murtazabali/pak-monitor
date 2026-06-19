@@ -39,6 +39,9 @@ export const FEEDS: FeedSource[] = [
   // ── The Nation ───────────────────────────────────────────────────────────
   { id: "nation-national", name: "National", outlet: "The Nation", url: "https://www.nation.com.pk/rss/national", enabled: true },
 
+  // ── ProPakistani (tech / business / telecom) ─────────────────────────────
+  { id: "propakistani", name: "Latest", outlet: "ProPakistani", url: "https://propakistani.pk/feed/", enabled: true },
+
   // ── Urdu-language (RTL) ──────────────────────────────────────────────────
   { id: "bbc-urdu", name: "Urdu", outlet: "BBC Urdu", url: "https://feeds.bbci.co.uk/urdu/rss.xml", enabled: true },
   { id: "express-urdu", name: "Urdu", outlet: "Express Urdu", url: "https://www.express.pk/feed/", enabled: true },

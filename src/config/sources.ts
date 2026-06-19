@@ -19,6 +19,7 @@ export const SOURCES: SourceMeta[] = [
   { outlet: "Samaa TV", domain: "samaa.tv", color: "#f43f5e", pk: true },
   { outlet: "Pakistan Today", domain: "pakistantoday.com.pk", color: "#3b82f6", pk: true },
   { outlet: "Daily Times", domain: "dailytimes.com.pk", color: "#8b5cf6", pk: true },
+  { outlet: "ProPakistani", domain: "propakistani.pk", color: "#84cc16", pk: true },
   { outlet: "Google News", domain: "news.google.com", color: "#94a3b8" },
   { outlet: "BBC Urdu", domain: "bbc.com", color: "#b91c1c", pk: true },
   { outlet: "Express Urdu", domain: "express.pk", color: "#d97706", pk: true },

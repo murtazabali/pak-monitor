@@ -36,10 +36,15 @@ jobs:
         env:
           GOOGLE_NEWS: "off"
           RSS_TIMEOUT_MS: "8000"
-      - name: Commit snapshot
+      - name: Publish snapshot to the data branch
         run: |
           git config user.name "pak-monitor-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add -f public/data/snapshot.json
-          git commit -m "chore: refresh snapshot [skip ci]" || { echo "no changes"; exit 0; }
-          git push
+          # Build a PARENTLESS commit holding only snapshot.json and force-push it
+          # to the data branch. No parent + force-push means that branch always has
+          # exactly one commit, so 5-min refreshes never grow the repo history.
+          # main is never touched. [skip ci] keeps other workflows from running.
+          blob=$(git hash-object -w public/data/snapshot.json)
+          tree=$(printf '100644 blob %s\tsnapshot.json\n' "$blob" | git mktree)
+          commit=$(git commit-tree "$tree" -m "data: refresh snapshot [skip ci]")
+          git push -f origin "$commit:refs/heads/data"

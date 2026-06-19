@@ -12,7 +12,7 @@
 [build.environment]
   NEXT_PUBLIC_DATA_SOURCE   = "static"
   NEXT_PUBLIC_REALTIME      = "poll"
-  # Read the data snapshot straight from GitHub's CDN. The snapshot is refreshed
-  # by a GitHub Action and committed with [skip ci], so Netlify never rebuilds
-  # for data — only for code changes.
-  NEXT_PUBLIC_SNAPSHOT_URL  = "https://raw.githubusercontent.com/murtazabali/pak-monitor/main/public/data/snapshot.json"
+  # Read the data snapshot straight from GitHub's CDN, off the orphan `data`
+  # branch the cron force-pushes (single commit, no history growth). main never
+  # carries data churn, so Netlify only ever rebuilds for code changes.
+  NEXT_PUBLIC_SNAPSHOT_URL  = "https://raw.githubusercontent.com/murtazabali/pak-monitor/data/snapshot.json"

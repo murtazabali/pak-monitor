@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getRecent, getStats } from "@/lib/db";
 import { clusterArticles } from "@/lib/cluster";
@@ -8,6 +9,13 @@ import { CATEGORY_BY_SLUG } from "@/config/categories";
 import { sourceColor } from "@/config/sources";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "24-Hour News Digest",
+  description:
+    "A rolling 24-hour digest of Pakistan city news — top stories, trending topics and the people, places and organisations making headlines across monitored cities.",
+  alternates: { canonical: "/digest" },
+};
 
 export default async function DigestPage({
   searchParams,

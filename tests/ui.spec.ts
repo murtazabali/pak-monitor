@@ -2,11 +2,9 @@ import { test, expect, type Page } from "@playwright/test";
 import type { Article } from "../src/lib/types";
 
 // ── Deterministic fixtures ──────────────────────────────────────────────────
-// "now" so that the "Today" date preset always includes these in the browser's
+// "now" so the "Today"/"24h" presets always include these in the browser's
 // local timezone, regardless of where the tests run.
 const NOW = new Date().toISOString();
-const DAY_MS = 86_400_000;
-const isoAt = (deltaMs: number) => new Date(Date.parse(NOW) + deltaMs).toISOString();
 
 function makeArticle(over: Partial<Article> & Pick<Article, "id" | "title">): Article {
   return {
@@ -25,7 +23,6 @@ function makeArticle(over: Partial<Article> & Pick<Article, "id" | "title">): Ar
 
 const ALPHA = makeArticle({ id: "alpha", title: "ZZ Crime fixture headline alpha", categories: ["crime"] });
 const BETA = makeArticle({ id: "beta", title: "ZZ Sports fixture headline beta", categories: ["sports"] });
-const GAMMA = makeArticle({ id: "gamma", title: "ZZ Live streamed headline gamma", categories: ["crime"] });
 const OLD = makeArticle({
   id: "old",
   title: "ZZ Old archived headline delta",
@@ -36,51 +33,39 @@ const OLD = makeArticle({
 
 const backlog = [ALPHA, BETA];
 
-function sseBody(...articles: Article[]): string {
-  const events = [`event: ready`, `data: {"ok":true}`, ``];
-  for (const a of articles) {
-    events.push(`event: article`, `data: ${JSON.stringify(a)}`, ``);
+// Stats derived from the same article list, so aggregates line up with the feed.
+function statsFor(list: Article[]) {
+  const byCategory: Record<string, number> = {};
+  const bySource: Record<string, number> = {};
+  const byCity: Record<string, number> = {};
+  for (const a of list) {
+    for (const c of a.categories) byCategory[c] = (byCategory[c] ?? 0) + 1;
+    bySource[a.source] = (bySource[a.source] ?? 0) + 1;
+    for (const c of a.cities) byCity[c] = (byCity[c] ?? 0) + 1;
   }
-  return events.join("\n") + "\n";
+  return {
+    total: list.length,
+    byCity,
+    byCategory,
+    bySource,
+    perHour: Array.from({ length: 24 }, (_, i) => i % 4),
+    topKeywords: [{ word: "karachi", count: 5 }],
+    topEntities: [{ name: "Karachi", count: 5 }],
+    spikes: [],
+  };
 }
 
-async function mockApi(page: Page, opts: { stream?: Article[]; backlog?: Article[] } = {}) {
+// The static app reads everything from one prebuilt snapshot file. Intercept it
+// so the dashboard, city pages and digest all run against deterministic data.
+async function mockApi(page: Page, opts: { backlog?: Article[] } = {}) {
   const list = opts.backlog ?? backlog;
-  await page.route("**/api/articles**", async (route) => {
-    await route.fulfill({
-      json: { articles: list, counts: { karachi: 2, lahore: 5, islamabad: 9 }, count: list.length },
-    });
-  });
-  await page.route("**/api/stream**", async (route) => {
-    await route.fulfill({
-      status: 200,
-      headers: { "content-type": "text/event-stream; charset=utf-8", "cache-control": "no-cache" },
-      body: sseBody(...(opts.stream ?? [])),
-    });
-  });
-  await page.route("**/api/stats**", async (route) => {
+  await page.route("**/data/snapshot.json**", async (route) => {
     await route.fulfill({
       json: {
-        total: list.length,
-        byCity: { karachi: 2, lahore: 5 },
-        byCategory: { crime: 1, sports: 1 },
-        bySource: { Dawn: 1, "Geo News": 1 },
-        perHour: Array.from({ length: 24 }, (_, i) => i % 4),
-        topKeywords: [
-          { word: "karachi", count: 5 },
-          { word: "flood", count: 3 },
-        ],
-      },
-    });
-  });
-  await page.route("**/api/health**", async (route) => {
-    await route.fulfill({
-      json: {
-        feeds: [
-          { id: "dawn", outlet: "Dawn", name: "Latest", url: "x", ok: true, items: 30, lastFetch: NOW },
-        ],
-        ok: 1,
-        total: 1,
+        generatedAt: NOW,
+        articles: list,
+        counts: { karachi: 2, lahore: 5, islamabad: 9 },
+        stats: statsFor(list),
       },
     });
   });
@@ -105,12 +90,6 @@ test.describe("Dashboard UI", () => {
     const svg = page.locator("svg[aria-label*='Pakistan']");
     await expect(svg).toBeVisible();
     expect(await svg.locator("circle").count()).toBeGreaterThan(5);
-  });
-
-  test("a live SSE article is prepended to the feed", async ({ page }) => {
-    await mockApi(page, { stream: [GAMMA] });
-    await page.goto("/");
-    await expect(page.getByText(GAMMA.title)).toBeVisible({ timeout: 10_000 });
   });
 
   test("search filters the feed", async ({ page }) => {
@@ -180,60 +159,6 @@ test.describe("Dashboard UI", () => {
     await expect(page.getByText("Paused")).toBeVisible();
   });
 
-  test("flushing the 'new' pill keeps the feed newest-first", async ({ page }) => {
-    const A = makeArticle({ id: "ord-a", title: "Provincial assembly debate concludes", publishedAt: isoAt(-2 * DAY_MS) });
-    const B = makeArticle({ id: "ord-b", title: "Cricket squad announced for tour", publishedAt: isoAt(0) });
-    const C = makeArticle({ id: "ord-c", title: "Rupee gains versus dollar markets", publishedAt: isoAt(-5 * DAY_MS) });
-
-    await page.route("**/api/articles**", (route) =>
-      route.fulfill({ json: { articles: [A], counts: { karachi: 1 }, count: 1 } }),
-    );
-    await page.route("**/api/stats**", (route) =>
-      route.fulfill({ json: { total: 1, byCity: {}, byCategory: {}, bySource: {}, perHour: [], topKeywords: [], topEntities: [], spikes: [] } }),
-    );
-    // Delay the stream so we can pause before B and C arrive (they then buffer).
-    await page.route("**/api/stream**", async (route) => {
-      await new Promise((res) => setTimeout(res, 1200));
-      await route.fulfill({
-        status: 200,
-        headers: { "content-type": "text/event-stream; charset=utf-8", "cache-control": "no-cache" },
-        body: sseBody(B, C),
-      });
-    });
-
-    await page.goto("/");
-    await expect(page.getByText(A.title)).toBeVisible();
-
-    await page.getByTitle("Pause live feed").click();
-    const pill = page.getByText(/new article/);
-    await expect(pill).toBeVisible();
-    await pill.click();
-
-    // After flushing, the feed must be newest-first: B (now), A (-2d), C (-5d).
-    const titles = (await page.locator("a.clamp-3").allTextContents()).map((t) => t.trim());
-    expect(titles).toEqual([B.title, A.title, C.title]);
-  });
-
-  test("changing city shows a feed loader", async ({ page }) => {
-    let delay = 0;
-    await page.route("**/api/articles**", async (route) => {
-      if (delay) await new Promise((r) => setTimeout(r, delay));
-      await route.fulfill({ json: { articles: [ALPHA], counts: { karachi: 2, lahore: 5 }, count: 1 } });
-    });
-    await page.route("**/api/stream**", (route) =>
-      route.fulfill({ status: 200, headers: { "content-type": "text/event-stream; charset=utf-8" }, body: sseBody() }),
-    );
-    await page.route("**/api/stats**", (route) =>
-      route.fulfill({ json: { total: 0, byCity: {}, byCategory: {}, bySource: {}, perHour: [], topKeywords: [], topEntities: [], spikes: [] } }),
-    );
-    await page.goto("/");
-    await expect(page.getByText(ALPHA.title)).toBeVisible();
-
-    delay = 700; // slow the next fetch so the loader is observable
-    await page.getByRole("button", { name: /^Lahore/ }).click();
-    await expect(page.getByText("Updating feed…")).toBeVisible();
-  });
-
   test("same-story headlines cluster with an 'outlets reporting' badge", async ({ page }) => {
     const headline = "Major flooding hits Karachi after record monsoon rain";
     await mockApi(page, {
@@ -275,7 +200,6 @@ test.describe("Dashboard UI", () => {
     await page.getByRole("button", { name: /Stats/ }).click();
     await expect(page.getByText("Statistics")).toBeVisible();
     await expect(page.getByText("Articles by category")).toBeVisible();
-    await expect(page.getByText(/Feed health/)).toBeVisible();
 
     // Escape closes the drawer.
     await page.keyboard.press("Escape");
@@ -292,21 +216,7 @@ test.describe("Dashboard UI", () => {
 test.describe("City detail page", () => {
   test("lists articles for the city", async ({ page }) => {
     const article = makeArticle({ id: "cp1", title: "Karachi city page test headline" });
-    await page.route("**/api/articles**", (route) =>
-      route.fulfill({ json: { articles: [article], counts: {}, count: 1 } }),
-    );
-    await page.route("**/api/stats**", (route) =>
-      route.fulfill({
-        json: {
-          total: 1,
-          byCity: { karachi: 1 },
-          byCategory: { crime: 1 },
-          bySource: { Dawn: 1 },
-          perHour: Array.from({ length: 24 }, () => 1),
-          topKeywords: [],
-        },
-      }),
-    );
+    await mockApi(page, { backlog: [article] });
     await page.goto("/city/karachi");
     await expect(page.getByRole("heading", { name: "Karachi" })).toBeVisible();
     await expect(page.getByText(article.title)).toBeVisible();

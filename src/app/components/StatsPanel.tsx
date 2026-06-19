@@ -47,12 +47,20 @@ export default function StatsPanel({
   open,
   onClose,
   citiesParam,
+  from,
+  to,
+  scope,
   stats: providedStats,
   onEntityClick,
 }: {
   open: boolean;
   onClose: () => void;
   citiesParam: string;
+  /** ISO date bounds for the selected period. */
+  from?: string;
+  to?: string;
+  /** Human label for the current scope, e.g. "Karachi · Last 24h". */
+  scope?: string;
   /** Pre-computed stats (static mode). When set, no /api/stats fetch happens. */
   stats?: Stats | null;
   onEntityClick?: (name: string) => void;
@@ -66,7 +74,11 @@ export default function StatsPanel({
     if (!open || providedStats) return;
     let cancel = false;
     setNow(Date.now());
-    fetch(`/api/stats?cities=${encodeURIComponent(citiesParam)}`)
+    const params = new URLSearchParams();
+    if (citiesParam) params.set("cities", citiesParam);
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+    fetch(`/api/stats?${params.toString()}`)
       .then((r) => r.json())
       .then((d) => !cancel && setFetched(d))
       .catch(() => {});
@@ -77,7 +89,17 @@ export default function StatsPanel({
     return () => {
       cancel = true;
     };
-  }, [open, citiesParam, providedStats]);
+  }, [open, citiesParam, from, to, providedStats]);
+
+  // Close on Escape.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
 
   if (!open) return null;
 
@@ -88,7 +110,10 @@ export default function StatsPanel({
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <aside className="scroll-thin relative flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-edge bg-base-900 shadow-2xl">
         <div className="sticky top-0 flex items-center justify-between border-b border-edge bg-base-900/95 px-4 py-3 backdrop-blur">
-          <h2 className="font-mono text-sm font-bold tracking-tight text-slate-100">📊 Statistics</h2>
+          <div>
+            <h2 className="font-mono text-sm font-bold tracking-tight text-slate-100">📊 Statistics</h2>
+            {scope && <p className="mt-0.5 text-[11px] text-accent/90">{scope}</p>}
+          </div>
           <button onClick={onClose} className="rounded px-2 py-1 text-sm text-muted hover:bg-base-700/60 hover:text-slate-200">
             ✕
           </button>
@@ -100,25 +125,27 @@ export default function StatsPanel({
           <div className="flex flex-col gap-5 p-4">
             <div>
               <div className="flex items-baseline justify-between">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-muted">
-                  Articles (last 24h activity)
-                </span>
+                <span className="font-mono text-[10px] uppercase tracking-widest text-muted">Articles in period</span>
                 <span className="font-mono text-lg font-bold text-accent">{stats.total}</span>
               </div>
+              <p className="mb-1 mt-2 font-mono text-[10px] uppercase tracking-widest text-muted">Last 24h activity</p>
               <Sparkline data={stats.perHour} width={360} height={56} />
             </div>
 
             <TopList
-              title="Top cities"
-              entries={Object.entries(stats.byCity)}
-              label={(k) => CITY_BY_SLUG[k]?.name ?? k}
-            />
-            <TopList
-              title="Categories"
+              title="Articles by category"
               entries={Object.entries(stats.byCategory)}
               color={(k) => CATEGORY_BY_SLUG[k]?.color ?? "#22d3ee"}
               label={(k) => CATEGORY_BY_SLUG[k]?.label ?? k}
             />
+            {/* Only useful in the All-Pakistan view; redundant once a city is selected. */}
+            {!citiesParam && (
+              <TopList
+                title="Top cities"
+                entries={Object.entries(stats.byCity)}
+                label={(k) => CITY_BY_SLUG[k]?.name ?? k}
+              />
+            )}
             <TopList title="Top sources" entries={Object.entries(stats.bySource)} color={sourceColor} />
 
             {stats.topEntities?.length > 0 && (

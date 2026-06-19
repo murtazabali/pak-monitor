@@ -421,6 +421,18 @@ export default function Dashboard() {
       ? "All Pakistan"
       : selectedCities.map((s) => CITY_BY_SLUG[s]?.name ?? s).join(", ");
 
+  const periodLabel =
+    dateRange.preset === "24h"
+      ? "Last 24h"
+      : dateRange.preset === "7d"
+        ? "Last 7 days"
+        : dateRange.preset === "30d"
+          ? "Last 30 days"
+          : dateRange.preset === "custom"
+            ? "Custom range"
+            : "All time";
+  const statsWindow = windowFor(dateRange, nowTick);
+
   return (
     <div className="flex h-screen flex-col overflow-hidden">
       {/* Header */}
@@ -602,6 +614,9 @@ export default function Dashboard() {
         open={statsOpen}
         onClose={() => setStatsOpen(false)}
         citiesParam={selectedCities.join(",")}
+        from={msToIso(statsWindow.fromMs)}
+        to={msToIso(statsWindow.toMs)}
+        scope={`${scopeLabel} · ${periodLabel}`}
         stats={DATA_SOURCE === "static" ? snapshotStats : undefined}
         onEntityClick={(name) => setQuery(name)}
       />

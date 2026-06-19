@@ -254,8 +254,12 @@ test.describe("Dashboard UI", () => {
     await page.goto("/");
     await page.getByRole("button", { name: /Stats/ }).click();
     await expect(page.getByText("Statistics")).toBeVisible();
-    await expect(page.getByText("Top cities")).toBeVisible();
+    await expect(page.getByText("Articles by category")).toBeVisible();
     await expect(page.getByText(/Feed health/)).toBeVisible();
+
+    // Escape closes the drawer.
+    await page.keyboard.press("Escape");
+    await expect(page.getByText("Statistics")).toHaveCount(0);
   });
 
   test("the CSV export button is present", async ({ page }) => {

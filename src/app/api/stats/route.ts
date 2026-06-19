@@ -11,7 +11,10 @@ function parseList(value: string | null): string[] {
 }
 
 export async function GET(req: NextRequest) {
-  const cities = parseList(req.nextUrl.searchParams.get("cities"));
-  const stats = await getStats(cities);
+  const sp = req.nextUrl.searchParams;
+  const cities = parseList(sp.get("cities"));
+  const from = sp.get("from") ?? undefined;
+  const to = sp.get("to") ?? undefined;
+  const stats = await getStats(cities, from, to);
   return Response.json(stats, { headers: { "Cache-Control": "no-store" } });
 }

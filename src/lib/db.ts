@@ -82,16 +82,23 @@ export async function cityCounts(): Promise<Record<string, number>> {
   return counts;
 }
 
-/** Aggregate stats over the stored window, optionally scoped to cities. */
-export async function getStats(cities?: string[]): Promise<Stats> {
+/** Aggregate stats over the stored window, optionally scoped to cities + a date
+ *  range (from/to ISO). The breakdowns reflect the period; the 24h sparkline is
+ *  always the city's most recent activity. */
+export async function getStats(cities?: string[], from?: string, to?: string): Promise<Stats> {
   const all = await store.load();
   const citySet = cities && cities.length ? new Set(cities) : null;
-  const items = citySet ? all.filter((a) => a.cities.some((c) => citySet.has(c))) : all;
+  const cityItems = citySet ? all.filter((a) => a.cities.some((c) => citySet.has(c))) : all;
+
+  const fromMs = from ? Date.parse(from) : NaN;
+  const toMs = to ? Date.parse(to) : NaN;
+  let items = cityItems;
+  if (!Number.isNaN(fromMs)) items = items.filter((a) => Date.parse(a.publishedAt) >= fromMs);
+  if (!Number.isNaN(toMs)) items = items.filter((a) => Date.parse(a.publishedAt) <= toMs);
 
   const byCity: Record<string, number> = {};
   const byCategory: Record<string, number> = {};
   const bySource: Record<string, number> = {};
-  const perHour = new Array<number>(24).fill(0);
   const keywords: Record<string, number> = {};
   const now = Date.now();
 
@@ -99,11 +106,14 @@ export async function getStats(cities?: string[]): Promise<Stats> {
     for (const c of a.cities) byCity[c] = (byCity[c] ?? 0) + 1;
     for (const c of a.categories) byCategory[c] = (byCategory[c] ?? 0) + 1;
     bySource[a.source] = (bySource[a.source] ?? 0) + 1;
+    for (const t of tokenize(a.title)) keywords[t] = (keywords[t] ?? 0) + 1;
+  }
 
+  // The sparkline shows the city's last-24h hourly activity (period-independent).
+  const perHour = new Array<number>(24).fill(0);
+  for (const a of cityItems) {
     const ageHours = Math.floor((now - Date.parse(a.publishedAt)) / 3_600_000);
     if (ageHours >= 0 && ageHours < 24) perHour[23 - ageHours]++;
-
-    for (const t of tokenize(a.title)) keywords[t] = (keywords[t] ?? 0) + 1;
   }
 
   const topKeywords = Object.entries(keywords)

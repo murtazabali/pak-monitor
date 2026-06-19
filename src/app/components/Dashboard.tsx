@@ -88,6 +88,7 @@ export default function Dashboard() {
   const [pulsing, setPulsing] = useState<Set<string>>(() => new Set());
   const [nowTick, setNowTick] = useState(() => Date.now());
   const [statsOpen, setStatsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [mapOpen, setMapOpen] = useLocalStorage<boolean>("pak-monitor:map", true);
   const [spikes, setSpikes] = useState<Stats["spikes"]>([]);
@@ -234,6 +235,7 @@ export default function Dashboard() {
 
     let cancelled = false;
     setStatus("connecting");
+    setLoading(true); // network re-fetch (city / date change) — cleared when the backlog loads
     seenRef.current = new Set();
     setBuffer([]);
     setPaused(false);
@@ -281,6 +283,7 @@ export default function Dashboard() {
           if (initial) {
             seenRef.current = new Set(list.map((a) => a.id));
             setArticles(list);
+            setLoading(false);
             if (EFFECTIVE_REALTIME === "poll") setStatus("live");
           } else {
             // newest-first list; replay only the unseen ones oldest→newest
@@ -288,14 +291,25 @@ export default function Dashboard() {
             for (const a of fresh) handleIncoming(a);
           }
         })
-        .catch(() => {});
+        .catch(() => {
+          if (!cancelled) setLoading(false);
+        });
 
     loadBacklog(true);
 
     if (EFFECTIVE_REALTIME === "sse") {
+      let lastReady = 0;
+      let unstableDrops = 0;
+      let pollTimer: ReturnType<typeof setInterval> | null = null;
+      const startPolling = () => {
+        if (!pollTimer) pollTimer = setInterval(() => loadBacklog(false), POLL_REFRESH_MS);
+      };
+
       const es = new EventSource(`/api/stream?${qs.toString()}`);
       es.addEventListener("ready", () => {
-        if (!cancelled) setStatus("live");
+        if (cancelled) return;
+        lastReady = Date.now();
+        setStatus("live");
       });
       es.addEventListener("article", (ev) => {
         if (cancelled) return;
@@ -306,11 +320,23 @@ export default function Dashboard() {
         }
       });
       es.onerror = () => {
-        if (!cancelled) setStatus("closed");
+        if (cancelled) return;
+        // If the connection keeps dropping shortly after connecting (e.g. on
+        // serverless, where a function can't hold a stream), give up on SSE and
+        // fall back to polling instead of flickering Live/Offline.
+        if (lastReady && Date.now() - lastReady < 25_000) unstableDrops++;
+        if (unstableDrops >= 2) {
+          es.close();
+          setStatus("live");
+          startPolling();
+          return;
+        }
+        setStatus(es.readyState === EventSource.CLOSED ? "closed" : "connecting");
       };
       return () => {
         cancelled = true;
         es.close();
+        if (pollTimer) clearInterval(pollTimer);
       };
     }
 
@@ -320,6 +346,19 @@ export default function Dashboard() {
       clearInterval(timer);
     };
   }, [selectedCities, dateRange, hydrated, triggerPulse]);
+
+  // Instant client-side filters (category / source / search / toggles) don't
+  // re-fetch, so flash a brief loader to acknowledge the action.
+  const filtersHydrated = useRef(false);
+  useEffect(() => {
+    if (!filtersHydrated.current) {
+      filtersHydrated.current = true;
+      return;
+    }
+    setLoading(true);
+    const t = setTimeout(() => setLoading(false), 300);
+    return () => clearTimeout(t);
+  }, [selectedCategories, selectedSources, query, clusterOn, hideRead, localOnly]);
 
   const flush = useCallback(() => {
     setArticles((prev) => [...buffer, ...prev].slice(0, MAX_RENDERED));
@@ -652,7 +691,15 @@ export default function Dashboard() {
             </button>
           )}
 
-          <div className="scroll-thin min-h-0 flex-1 overflow-y-auto px-4 py-3">
+          <div className="scroll-thin relative min-h-0 flex-1 overflow-y-auto px-4 py-3">
+            {loading && (
+              <div className="pointer-events-none sticky top-0 z-10 -mt-1 mb-1 flex justify-center">
+                <span className="inline-flex items-center gap-2 rounded-full border border-edge bg-base-850/95 px-3 py-1 text-xs text-accent shadow-lg backdrop-blur">
+                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-accent/30 border-t-accent" />
+                  Updating feed…
+                </span>
+              </div>
+            )}
             <FeedList
               clusters={clusters}
               isRead={isRead}

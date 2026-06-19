@@ -214,6 +214,26 @@ test.describe("Dashboard UI", () => {
     expect(titles).toEqual([B.title, A.title, C.title]);
   });
 
+  test("changing city shows a feed loader", async ({ page }) => {
+    let delay = 0;
+    await page.route("**/api/articles**", async (route) => {
+      if (delay) await new Promise((r) => setTimeout(r, delay));
+      await route.fulfill({ json: { articles: [ALPHA], counts: { karachi: 2, lahore: 5 }, count: 1 } });
+    });
+    await page.route("**/api/stream**", (route) =>
+      route.fulfill({ status: 200, headers: { "content-type": "text/event-stream; charset=utf-8" }, body: sseBody() }),
+    );
+    await page.route("**/api/stats**", (route) =>
+      route.fulfill({ json: { total: 0, byCity: {}, byCategory: {}, bySource: {}, perHour: [], topKeywords: [], topEntities: [], spikes: [] } }),
+    );
+    await page.goto("/");
+    await expect(page.getByText(ALPHA.title)).toBeVisible();
+
+    delay = 700; // slow the next fetch so the loader is observable
+    await page.getByRole("button", { name: /^Lahore/ }).click();
+    await expect(page.getByText("Updating feed…")).toBeVisible();
+  });
+
   test("same-story headlines cluster with an 'outlets reporting' badge", async ({ page }) => {
     const headline = "Major flooding hits Karachi after record monsoon rain";
     await mockApi(page, {

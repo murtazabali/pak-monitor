@@ -12,6 +12,9 @@ export const metadata: Metadata = {
     shortcut: "/icon.svg",
     apple: "/icon.svg",
   },
+  other: {
+    "google-adsense-account": "ca-pub-9118158293508962",
+  },
 };
 
 export const viewport: Viewport = {

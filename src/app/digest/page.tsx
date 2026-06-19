@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getRecent, getStats } from "@/lib/db";
 import { clusterArticles } from "@/lib/cluster";
+import { extractEntities } from "@/lib/entities";
+import { isLocalArticle } from "@/lib/relevance";
 import { CITY_BY_SLUG } from "@/config/cities";
 import { CATEGORY_BY_SLUG } from "@/config/categories";
 import { sourceColor } from "@/config/sources";
@@ -16,10 +18,20 @@ export default async function DigestPage({
   const cities = sp.cities ? sp.cities.split(",").filter(Boolean) : [];
   const since = new Date(Date.now() - 24 * 3_600_000).toISOString();
 
-  const [articles, stats] = await Promise.all([
+  const [raw, stats] = await Promise.all([
     getRecent({ cities, from: since, limit: 500 }),
     getStats(cities),
   ]);
+  // Keep the digest Pakistan-relevant (drops foreign Google News noise).
+  const articles = raw.filter(isLocalArticle);
+
+  const byCategory: Record<string, number> = {};
+  const byCity: Record<string, number> = {};
+  for (const a of articles) {
+    for (const c of a.categories) byCategory[c] = (byCategory[c] ?? 0) + 1;
+    for (const c of a.cities) byCity[c] = (byCity[c] ?? 0) + 1;
+  }
+  const topEntities = extractEntities(articles.map((a) => a.title));
 
   const trending = clusterArticles(articles)
     .filter((c) => c.sources.length >= 2)
@@ -28,6 +40,9 @@ export default async function DigestPage({
 
   const scope = cities.length ? cities.map((c) => CITY_BY_SLUG[c]?.name ?? c).join(", ") : "All Pakistan";
   const day = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+  const subtitle = cities.length
+    ? `${articles.length} ${scope} articles in the last 24 hours.`
+    : `${articles.length} articles in the last 24 hours across ${Object.keys(byCity).length} cities.`;
 
   return (
     <div className="mx-auto flex min-h-screen max-w-3xl flex-col px-4 py-6">
@@ -38,9 +53,7 @@ export default async function DigestPage({
       <header className="mb-6 border-b border-edge/70 pb-4">
         <p className="font-mono text-[10px] uppercase tracking-widest text-muted">Daily digest · {day}</p>
         <h1 className="font-mono text-2xl font-bold text-slate-100">{scope}</h1>
-        <p className="mt-1 text-sm text-muted">
-          {stats.total} articles in the last 24 hours across {Object.keys(stats.byCity).length} cities.
-        </p>
+        <p className="mt-1 text-sm text-muted">{subtitle}</p>
       </header>
 
       {stats.spikes.length > 0 && (
@@ -89,7 +102,7 @@ export default async function DigestPage({
         <div>
           <h2 className="mb-2 font-mono text-xs uppercase tracking-widest text-muted">By category</h2>
           <div className="flex flex-col gap-1">
-            {Object.entries(stats.byCategory)
+            {Object.entries(byCategory)
               .sort((a, b) => b[1] - a[1])
               .map(([cat, n]) => (
                 <div key={cat} className="flex items-center gap-2 text-sm">
@@ -103,7 +116,7 @@ export default async function DigestPage({
         <div>
           <h2 className="mb-2 font-mono text-xs uppercase tracking-widest text-muted">Most mentioned</h2>
           <div className="flex flex-wrap gap-x-2 gap-y-1">
-            {stats.topEntities.slice(0, 14).map((e) => (
+            {topEntities.slice(0, 14).map((e) => (
               <span key={e.name} className="text-sm text-slate-300">
                 {e.name}
                 <span className="text-muted"> {e.count}</span>

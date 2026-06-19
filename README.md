@@ -141,9 +141,32 @@ docker run -p 3000:3000 pak-monitor
 docker run -p 3000:3000 -e ALERT_WEBHOOK_URL=https://hooks.slack.com/... pak-monitor
 ```
 
-> **Where to deploy:** the background poller + SSE want a **always-on Node process**, so a long-running host (Render, Railway, Fly.io, a VPS) is the best fit. The one-click Vercel button works for trying it out, but serverless functions are ephemeral — the poller and SSE connections won't stay warm the way they do on a persistent host.
-
 > **Scaling note:** the realtime fan-out uses an in-process event bus, which is perfect for a single instance. To run multiple instances behind a load balancer, swap the bus in [`src/lib/bus.ts`](src/lib/bus.ts) for a shared pub/sub (e.g. Redis) and lowdb in [`src/lib/db.ts`](src/lib/db.ts) for a real database — both are isolated behind small modules.
+
+## 🚀 Deploying
+
+You only need a server because **browsers can't read cross-origin RSS feeds (CORS)** — the feeds must be fetched off-browser. But you don't need an *always-on* server or a database. Three modes, selected by env vars:
+
+| Mode | Best host | Ingestion | Reads | Realtime |
+|---|---|---|---|---|
+| **Always-on** (default) | Render / Railway / Fly / VPS / Docker | in-process poller | live API + lowdb | SSE (instant) |
+| **Serverless** | Netlify / Vercel | scheduled fn → `/api/ingest` | live API + Blobs | client polling |
+| **Static-JSON** | anywhere (incl. static hosts) | cron → `snapshot.json` | a static file | client polling |
+
+**Knobs:** `STORAGE` (`lowdb`\|`blobs`), `NEXT_PUBLIC_REALTIME` (`sse`\|`poll`), `NEXT_PUBLIC_DATA_SOURCE` (`api`\|`static`), plus the universal **`/api/ingest`** endpoint (protect it with `CRON_SECRET`) that any scheduler can call.
+
+### Netlify (serverless)
+
+1. Connect the repo to Netlify (it auto-detects Next.js). [`netlify.toml`](netlify.toml) already sets `STORAGE=blobs`, `NEXT_PUBLIC_REALTIME=poll`, `GOOGLE_NEWS=off`.
+2. In the Netlify UI set a `CRON_SECRET` (and optionally `ALERT_WEBHOOK_URL`).
+3. [`netlify/functions/ingest-scheduled.mts`](netlify/functions/ingest-scheduled.mts) pings `/api/ingest` every 2 minutes to refresh the data in Netlify Blobs.
+
+### Static-JSON (no live backend)
+
+1. A cron regenerates the data file: `npm run snapshot` writes `public/data/snapshot.json`. The included [`.github/workflows/snapshot.yml`](.github/workflows/snapshot.yml) does this on a schedule and commits it.
+2. Build/host with `NEXT_PUBLIC_DATA_SOURCE=static`; the dashboard polls the snapshot — no live ingestion or DB needed.
+
+> The static mode powers the **dashboard**. The **city pages** and **digest** read live data, so they need the always-on or serverless mode (or live ingestion). Committing the snapshot adds repo churn — lower the cron cadence or push it to a CDN/Blob if that matters.
 
 ## 🗂️ Project structure
 

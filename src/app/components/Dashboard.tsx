@@ -30,6 +30,10 @@ const DAY = 86_400_000;
 const POLL_REFRESH_MS = 30_000;
 // SSE on always-on hosts; "poll" (set via NEXT_PUBLIC_REALTIME) for serverless.
 const REALTIME: "sse" | "poll" = process.env.NEXT_PUBLIC_REALTIME === "poll" ? "poll" : "sse";
+// "static" sources all data from a cron-generated snapshot file (no read-API).
+const DATA_SOURCE: "api" | "static" = process.env.NEXT_PUBLIC_DATA_SOURCE === "static" ? "static" : "api";
+const SNAPSHOT_URL = "/data/snapshot.json";
+const EFFECTIVE_REALTIME: "sse" | "poll" = DATA_SOURCE === "static" ? "poll" : REALTIME;
 
 function msToIso(ms: number | null): string {
   return ms == null ? "" : new Date(ms).toISOString();
@@ -85,6 +89,7 @@ export default function Dashboard() {
   const [nowTick, setNowTick] = useState(() => Date.now());
   const [statsOpen, setStatsOpen] = useState(false);
   const [spikes, setSpikes] = useState<Stats["spikes"]>([]);
+  const [snapshotStats, setSnapshotStats] = useState<Stats | null>(null);
   const [cursor, setCursor] = useState(0);
 
   const cursorRef = useRef(0);
@@ -170,8 +175,10 @@ export default function Dashboard() {
     return () => clearInterval(t);
   }, []);
 
-  // Poll global activity spikes (independent of the current city scope).
+  // Activity spikes: poll /api/stats in API mode; read them from the snapshot
+  // stats in static mode.
   useEffect(() => {
+    if (DATA_SOURCE !== "api") return;
     let cancel = false;
     const load = () =>
       fetch("/api/stats")
@@ -185,6 +192,10 @@ export default function Dashboard() {
       clearInterval(t);
     };
   }, []);
+
+  useEffect(() => {
+    if (DATA_SOURCE === "static") setSpikes(snapshotStats?.spikes ?? []);
+  }, [snapshotStats]);
 
   const triggerPulse = useCallback((slugs: string[]) => {
     if (slugs.length === 0) return;
@@ -254,7 +265,8 @@ export default function Dashboard() {
 
     const backlogParams = new URLSearchParams(qs);
     backlogParams.set("limit", fromISO || toISO ? "500" : "200");
-    const backlogUrl = `/api/articles?${backlogParams.toString()}`;
+    // In static mode read the full snapshot (filtering happens client-side).
+    const backlogUrl = DATA_SOURCE === "static" ? SNAPSHOT_URL : `/api/articles?${backlogParams.toString()}`;
 
     const loadBacklog = (initial: boolean) =>
       fetch(backlogUrl)
@@ -263,10 +275,11 @@ export default function Dashboard() {
           if (cancelled) return;
           const list: Article[] = data.articles ?? [];
           setCounts(data.counts ?? {});
+          if (DATA_SOURCE === "static" && data.stats) setSnapshotStats(data.stats as Stats);
           if (initial) {
             seenRef.current = new Set(list.map((a) => a.id));
             setArticles(list);
-            if (REALTIME === "poll") setStatus("live");
+            if (EFFECTIVE_REALTIME === "poll") setStatus("live");
           } else {
             // newest-first list; replay only the unseen ones oldest→newest
             const fresh = list.filter((a) => !seenRef.current.has(a.id)).reverse();
@@ -277,7 +290,7 @@ export default function Dashboard() {
 
     loadBacklog(true);
 
-    if (REALTIME === "sse") {
+    if (EFFECTIVE_REALTIME === "sse") {
       const es = new EventSource(`/api/stream?${qs.toString()}`);
       es.addEventListener("ready", () => {
         if (!cancelled) setStatus("live");
@@ -339,9 +352,13 @@ export default function Dashboard() {
   const displayed = useMemo(() => {
     const cats = new Set(selectedCategories);
     const srcs = new Set(selectedSources);
+    const citySet = selectedCities.length ? new Set(selectedCities) : null;
     const needle = query.trim().toLowerCase();
     const { fromMs, toMs } = windowFor(dateRange, nowTick);
     const filtered = articles.filter((a) => {
+      // City filtering is server-side in API mode (no-op here) but needed for
+      // the full-dataset snapshot in static mode.
+      if (citySet && !a.cities.some((c) => citySet.has(c))) return false;
       if (localOnly && !isLocalArticle(a)) return false;
       if (cats.size && !a.categories.some((c) => cats.has(c))) return false;
       if (srcs.size && !srcs.has(a.source)) return false;
@@ -358,7 +375,7 @@ export default function Dashboard() {
     // poll merges can otherwise disturb the order.
     filtered.sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
     return filtered;
-  }, [articles, selectedCategories, selectedSources, query, dateRange, nowTick, hideRead, readSet, localOnly]);
+  }, [articles, selectedCities, selectedCategories, selectedSources, query, dateRange, nowTick, hideRead, readSet, localOnly]);
 
   const clusters = useMemo(
     () => (clusterOn ? clusterArticles(displayed) : displayed.map(singleton)),
@@ -585,6 +602,7 @@ export default function Dashboard() {
         open={statsOpen}
         onClose={() => setStatsOpen(false)}
         citiesParam={selectedCities.join(",")}
+        stats={DATA_SOURCE === "static" ? snapshotStats : undefined}
         onEntityClick={(name) => setQuery(name)}
       />
     </div>

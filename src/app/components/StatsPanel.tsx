@@ -47,24 +47,28 @@ export default function StatsPanel({
   open,
   onClose,
   citiesParam,
+  stats: providedStats,
   onEntityClick,
 }: {
   open: boolean;
   onClose: () => void;
   citiesParam: string;
+  /** Pre-computed stats (static mode). When set, no /api/stats fetch happens. */
+  stats?: Stats | null;
   onEntityClick?: (name: string) => void;
 }) {
-  const [stats, setStats] = useState<Stats | null>(null);
+  const [fetched, setFetched] = useState<Stats | null>(null);
   const [health, setHealth] = useState<FeedHealth[]>([]);
   const [now, setNow] = useState(() => Date.now());
+  const stats = providedStats ?? fetched;
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || providedStats) return;
     let cancel = false;
     setNow(Date.now());
     fetch(`/api/stats?cities=${encodeURIComponent(citiesParam)}`)
       .then((r) => r.json())
-      .then((d) => !cancel && setStats(d))
+      .then((d) => !cancel && setFetched(d))
       .catch(() => {});
     fetch(`/api/health`)
       .then((r) => r.json())
@@ -73,7 +77,7 @@ export default function StatsPanel({
     return () => {
       cancel = true;
     };
-  }, [open, citiesParam]);
+  }, [open, citiesParam, providedStats]);
 
   if (!open) return null;
 

@@ -1,0 +1,40 @@
+name: Snapshot
+
+# Regenerates the static data snapshot on a schedule (for static-JSON deploys).
+# GitHub's scheduled-workflow minimum is ~5 min and runs can be delayed; the
+# committed JSON also adds repo churn — lower the interval or push the snapshot
+# to a CDN/Blob instead if that matters to you.
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Generate snapshot
+        run: npm run snapshot
+        env:
+          GOOGLE_NEWS: "off"
+          RSS_TIMEOUT_MS: "8000"
+      - name: Commit snapshot
+        run: |
+          git config user.name "pak-monitor-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -f public/data/snapshot.json
+          git commit -m "chore: refresh snapshot [skip ci]" || { echo "no changes"; exit 0; }
+          git push

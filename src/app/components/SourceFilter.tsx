@@ -1,6 +1,7 @@
 "use client";
 
 import { sourceColor } from "@/config/sources";
+import { useDetailsAutoClose } from "./useDetailsAutoClose";
 
 export default function SourceFilter({
   available,
@@ -14,8 +15,9 @@ export default function SourceFilter({
   onClear: () => void;
 }) {
   const count = selected.length;
+  const ref = useDetailsAutoClose();
   return (
-    <details className="group relative">
+    <details ref={ref} className="group relative">
       <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-md border border-base-600 bg-base-800/50 px-2 py-1 text-xs text-slate-300 hover:bg-base-700/60 [&::-webkit-details-marker]:hidden">
         Sources{count > 0 ? ` · ${count}` : ""}
         <span className="text-[9px] text-muted">▾</span>

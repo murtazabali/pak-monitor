@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useDetailsAutoClose } from "./useDetailsAutoClose";
 
 export interface SavedView {
   name: string;
@@ -22,9 +23,10 @@ export default function SavedViews({
   onDelete: (name: string) => void;
 }) {
   const [name, setName] = useState("");
+  const ref = useDetailsAutoClose();
 
   return (
-    <details className="relative">
+    <details ref={ref} className="relative">
       <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-md border border-base-600 bg-base-800/50 px-2 py-1 text-xs text-slate-300 hover:bg-base-700/60 [&::-webkit-details-marker]:hidden">
         ★ Views{views.length ? ` · ${views.length}` : ""}
         <span className="text-[9px] text-muted">▾</span>

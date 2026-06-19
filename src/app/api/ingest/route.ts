@@ -4,7 +4,6 @@ import { runIngestCycle } from "@/lib/ingest";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
 
 /**
  * Universal ingestion trigger. Any scheduler (Netlify Scheduled Function, Vercel

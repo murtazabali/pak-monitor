@@ -22,7 +22,7 @@ import SpikeBanner from "./SpikeBanner";
 import SavedViews, { type SavedView } from "./SavedViews";
 import SiteFooter from "./SiteFooter";
 import AdUnit from "./AdUnit";
-import { ADSENSE_SLOTS } from "@/config/site";
+import { ADSENSE_SLOTS, SNAPSHOT_URL } from "@/config/site";
 import { useLocalStorage } from "./hooks";
 import { notify, playPing } from "./alerts";
 
@@ -33,9 +33,10 @@ const DAY = 86_400_000;
 const POLL_REFRESH_MS = 30_000;
 // SSE on always-on hosts; "poll" (set via NEXT_PUBLIC_REALTIME) for serverless.
 const REALTIME: "sse" | "poll" = process.env.NEXT_PUBLIC_REALTIME === "poll" ? "poll" : "sse";
-// "static" sources all data from a cron-generated snapshot file (no read-API).
-const DATA_SOURCE: "api" | "static" = process.env.NEXT_PUBLIC_DATA_SOURCE === "static" ? "static" : "api";
-const SNAPSHOT_URL = "/data/snapshot.json";
+// Static-export build sources all data from a cron-generated snapshot (no
+// read-API). Default is "static"; set NEXT_PUBLIC_DATA_SOURCE=api only when
+// running against a live backend (serverless/always-on modes).
+const DATA_SOURCE: "api" | "static" = process.env.NEXT_PUBLIC_DATA_SOURCE === "api" ? "api" : "static";
 const EFFECTIVE_REALTIME: "sse" | "poll" = DATA_SOURCE === "static" ? "poll" : REALTIME;
 
 function msToIso(ms: number | null): string {
@@ -503,15 +504,17 @@ export default function Dashboard() {
       >
         Digest
       </a>
-      <a
-        href={rssHref}
-        target="_blank"
-        rel="noopener noreferrer"
-        title="Subscribe to this view as RSS"
-        className="rounded-md border border-base-600 bg-base-800/50 px-2 py-1 text-xs text-signal-warn hover:bg-base-700/70"
-      >
-        ⤵ RSS
-      </a>
+      {DATA_SOURCE === "api" && (
+        <a
+          href={rssHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Subscribe to this view as RSS"
+          className="rounded-md border border-base-600 bg-base-800/50 px-2 py-1 text-xs text-signal-warn hover:bg-base-700/70"
+        >
+          ⤵ RSS
+        </a>
+      )}
     </>
   );
 

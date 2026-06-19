@@ -1,0 +1,166 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import type { Article, Stats } from "@/lib/types";
+import { clusterArticles } from "@/lib/cluster";
+import { extractEntities } from "@/lib/entities";
+import { isLocalArticle } from "@/lib/relevance";
+import { CITY_BY_SLUG } from "@/config/cities";
+import { CATEGORY_BY_SLUG } from "@/config/categories";
+import { sourceColor } from "@/config/sources";
+import SiteFooter from "@/app/components/SiteFooter";
+import AdUnit from "@/app/components/AdUnit";
+import { ADSENSE_SLOTS, SNAPSHOT_URL } from "@/config/site";
+
+interface Snapshot {
+  articles?: Article[];
+  stats?: Stats;
+}
+
+/**
+ * Client-side digest. Reads the same static snapshot the dashboard uses and
+ * recomputes everything (top stories, categories, entities) in the browser, so
+ * the page needs no server. Renders a loading shell until the snapshot arrives
+ * (keeps the prerendered HTML deterministic — no hydration mismatches).
+ */
+export default function DigestView() {
+  const [snap, setSnap] = useState<Snapshot | null>(null);
+  const [cities, setCities] = useState<string[]>([]);
+
+  useEffect(() => {
+    const c = new URLSearchParams(window.location.search).get("cities");
+    setCities(c ? c.split(",").filter(Boolean) : []);
+    fetch(SNAPSHOT_URL)
+      .then((r) => r.json())
+      .then((d: Snapshot) => setSnap(d))
+      .catch(() => setSnap({ articles: [] }));
+  }, []);
+
+  if (!snap) {
+    return (
+      <div className="mx-auto flex min-h-screen max-w-3xl flex-col px-4 py-6">
+        <Link href="/" className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-accent">
+          ← Back to monitor
+        </Link>
+        <p className="py-16 text-center text-sm text-muted">Loading digest…</p>
+      </div>
+    );
+  }
+
+  const since = Date.now() - 24 * 3_600_000;
+  const articles = (snap.articles ?? []).filter(
+    (a) =>
+      isLocalArticle(a) &&
+      Date.parse(a.publishedAt) >= since &&
+      (cities.length === 0 || a.cities?.some((c) => cities.includes(c))),
+  );
+
+  const byCategory: Record<string, number> = {};
+  const byCity: Record<string, number> = {};
+  for (const a of articles) {
+    for (const c of a.categories) byCategory[c] = (byCategory[c] ?? 0) + 1;
+    for (const c of a.cities) byCity[c] = (byCity[c] ?? 0) + 1;
+  }
+  const topEntities = extractEntities(articles.map((a) => a.title));
+  const trending = clusterArticles(articles)
+    .filter((c) => c.sources.length >= 2)
+    .sort((a, b) => b.sources.length - a.sources.length)
+    .slice(0, 12);
+  const spikes = snap.stats?.spikes ?? [];
+
+  const scope = cities.length ? cities.map((c) => CITY_BY_SLUG[c]?.name ?? c).join(", ") : "All Pakistan";
+  const day = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+  const subtitle = cities.length
+    ? `${articles.length} ${scope} articles in the last 24 hours.`
+    : `${articles.length} articles in the last 24 hours across ${Object.keys(byCity).length} cities.`;
+
+  return (
+    <div className="mx-auto flex min-h-screen max-w-3xl flex-col px-4 py-6">
+      <Link href="/" className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-accent">
+        ← Back to monitor
+      </Link>
+
+      <header className="mb-6 border-b border-edge/70 pb-4">
+        <p className="font-mono text-[10px] uppercase tracking-widest text-muted">Daily digest · {day}</p>
+        <h1 className="font-mono text-2xl font-bold text-slate-100">{scope}</h1>
+        <p className="mt-1 text-sm text-muted">{subtitle}</p>
+      </header>
+
+      {spikes.length > 0 && (
+        <section className="mb-6">
+          <h2 className="mb-2 font-mono text-xs uppercase tracking-widest text-signal-warn">⚠ Activity spikes</h2>
+          <div className="flex flex-wrap gap-2">
+            {spikes.map((s) => (
+              <span key={s.city} className="rounded-md border border-signal-warn/40 bg-signal-warn/10 px-2.5 py-1 text-sm text-signal-warn">
+                {CITY_BY_SLUG[s.city]?.name ?? s.city} ↑ {s.ratio}× ({s.recent} this hour)
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="mb-6">
+        <h2 className="mb-2 font-mono text-xs uppercase tracking-widest text-muted">🔥 Top stories</h2>
+        {trending.length === 0 ? (
+          <p className="text-sm text-muted">No multi-outlet stories in the last 24h.</p>
+        ) : (
+          <ol className="flex flex-col gap-2.5">
+            {trending.map((c) => (
+              <li key={c.id} className="flex gap-2">
+                <span className="mt-0.5 shrink-0 rounded-full bg-signal-warn/20 px-1.5 font-mono text-[10px] text-signal-warn">
+                  {c.sources.length}
+                </span>
+                <div className="min-w-0">
+                  <a href={c.lead.link} target="_blank" rel="noopener noreferrer" dir="auto" className="font-medium text-slate-100 hover:text-accent">
+                    {c.lead.title}
+                  </a>
+                  <p className="mt-0.5 flex flex-wrap gap-x-1.5 text-[11px]">
+                    {c.sources.map((s) => (
+                      <span key={s} style={{ color: sourceColor(s) }}>
+                        {s}
+                      </span>
+                    ))}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+
+      <section className="mb-6 grid grid-cols-2 gap-6">
+        <div>
+          <h2 className="mb-2 font-mono text-xs uppercase tracking-widest text-muted">By category</h2>
+          <div className="flex flex-col gap-1">
+            {Object.entries(byCategory)
+              .sort((a, b) => b[1] - a[1])
+              .map(([cat, n]) => (
+                <div key={cat} className="flex items-center gap-2 text-sm">
+                  <span className="h-2 w-2 rounded-full" style={{ background: CATEGORY_BY_SLUG[cat]?.color ?? "#64748b" }} />
+                  <span className="flex-1 text-slate-300">{CATEGORY_BY_SLUG[cat]?.label ?? cat}</span>
+                  <span className="font-mono text-muted">{n}</span>
+                </div>
+              ))}
+          </div>
+        </div>
+        <div>
+          <h2 className="mb-2 font-mono text-xs uppercase tracking-widest text-muted">Most mentioned</h2>
+          <div className="flex flex-wrap gap-x-2 gap-y-1">
+            {topEntities.slice(0, 14).map((e) => (
+              <span key={e.name} className="text-sm text-slate-300">
+                {e.name}
+                <span className="text-muted"> {e.count}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <AdUnit slot={ADSENSE_SLOTS.article} className="my-6 block" />
+      <div className="mt-8">
+        <SiteFooter />
+      </div>
+    </div>
+  );
+}

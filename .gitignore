@@ -14,8 +14,8 @@ next-env.d.ts
 # runtime data (lowdb store is generated at runtime)
 /data/*.json
 
-# static snapshot (generated locally; the cron workflow force-commits it)
-/public/data/
+# static snapshot: tracked on purpose. The static frontend reads it from GitHub's
+# raw CDN, so it must live on the default branch; the cron workflow refreshes it.
 
 # misc
 .DS_Store

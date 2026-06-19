@@ -1,5 +1,8 @@
 import type { MetadataRoute } from "next";
 
+// Generated at build time (required for output: "export").
+export const dynamic = "force-static";
+
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Pak Monitor — Realtime Pakistan City News",

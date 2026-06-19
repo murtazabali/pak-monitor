@@ -2,6 +2,9 @@ import type { MetadataRoute } from "next";
 import { CITIES } from "@/config/cities";
 import { SITE_URL } from "@/config/site";
 
+// Generated at build time (required for output: "export").
+export const dynamic = "force-static";
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
 

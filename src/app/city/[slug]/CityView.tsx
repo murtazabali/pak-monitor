@@ -8,7 +8,19 @@ import ArticleCard from "@/app/components/ArticleCard";
 import Sparkline from "@/app/components/Sparkline";
 import SiteFooter from "@/app/components/SiteFooter";
 import AdUnit from "@/app/components/AdUnit";
-import { ADSENSE_SLOTS } from "@/config/site";
+import { ADSENSE_SLOTS, SNAPSHOT_URL } from "@/config/site";
+
+/** Per-city stats computed client-side from the static snapshot. */
+function cityStats(items: Article[], now: number): Pick<Stats, "total" | "perHour" | "byCategory"> {
+  const byCategory: Record<string, number> = {};
+  const perHour = new Array<number>(24).fill(0);
+  for (const a of items) {
+    for (const c of a.categories) byCategory[c] = (byCategory[c] ?? 0) + 1;
+    const ageHours = Math.floor((now - Date.parse(a.publishedAt)) / 3_600_000);
+    if (ageHours >= 0 && ageHours < 24) perHour[23 - ageHours]++;
+  }
+  return { total: items.length, perHour, byCategory };
+}
 
 export default function CityView({
   slug,
@@ -20,19 +32,24 @@ export default function CityView({
   province: string;
 }) {
   const [articles, setArticles] = useState<Article[]>([]);
-  const [stats, setStats] = useState<Stats | null>(null);
+  const [stats, setStats] = useState<Pick<Stats, "total" | "perHour" | "byCategory"> | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     let cancel = false;
-    setNow(Date.now());
-    fetch(`/api/articles?cities=${slug}&limit=100`)
+    const t = Date.now();
+    setNow(t);
+    fetch(SNAPSHOT_URL)
       .then((r) => r.json())
-      .then((d) => !cancel && setArticles(d.articles ?? []))
-      .catch(() => {});
-    fetch(`/api/stats?cities=${slug}`)
-      .then((r) => r.json())
-      .then((d) => !cancel && setStats(d))
+      .then((d: { articles?: Article[] }) => {
+        if (cancel) return;
+        const mine = (d.articles ?? [])
+          .filter((a) => a.cities?.includes(slug))
+          .sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt))
+          .slice(0, 100);
+        setArticles(mine);
+        setStats(cityStats(mine, t));
+      })
       .catch(() => {});
     return () => {
       cancel = true;

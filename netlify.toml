@@ -1,20 +1,18 @@
 [build]
   command = "npm run build"
 
-# Official Next.js runtime (Netlify also auto-detects it).
+# next.config sets output:"export", so `next build` emits a pure static site to
+# out/. The Next runtime plugin detects export mode and publishes those static
+# files with ZERO serverless functions — nothing runs on Netlify at request time.
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-[functions]
-  node_bundler = "esbuild"
-
-# IMPORTANT: [build.environment] is BUILD-TIME ONLY and does NOT reach the
-# functions at runtime. Set these in the Netlify UI (Site configuration →
-# Environment variables) so both the build and the running functions see them:
-#
-#   STORAGE              = blobs        (serverless storage; lowdb can't persist on Lambda)
-#   DISABLE_POLLER       = 1            (no always-on process; ingest runs via the scheduled fn)
-#   NEXT_PUBLIC_REALTIME = poll         (client polls instead of SSE)
-#   GOOGLE_NEWS          = off          (keep each ingest within the function timeout)
-#   RSS_TIMEOUT_MS       = 6000
-#   CRON_SECRET          = <random>     (protects /api/ingest)
+# Build-time public env (inlined into the static bundle). No functions exist, so
+# there is nothing to configure at runtime.
+[build.environment]
+  NEXT_PUBLIC_DATA_SOURCE   = "static"
+  NEXT_PUBLIC_REALTIME      = "poll"
+  # Read the data snapshot straight from GitHub's CDN. The snapshot is refreshed
+  # by a GitHub Action and committed with [skip ci], so Netlify never rebuilds
+  # for data — only for code changes.
+  NEXT_PUBLIC_SNAPSHOT_URL  = "https://raw.githubusercontent.com/murtazabali/pak-monitor/main/public/data/snapshot.json"

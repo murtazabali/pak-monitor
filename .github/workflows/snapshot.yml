@@ -5,12 +5,13 @@ name: Snapshot
 # committed JSON also adds repo churn — lower the interval or push the snapshot
 # to a CDN/Blob instead if that matters to you.
 on:
-  # Auto-schedule is disabled by default: committing the snapshot every run adds
-  # repo churn, and it's only needed for the static-JSON deploy mode (not the
-  # serverless/always-on modes). Run it manually via "Run workflow", or uncomment
-  # the schedule below if you deploy in static mode.
-  # schedule:
-  #   - cron: "0 */6 * * *"
+  # Refreshes public/data/snapshot.json for the static deploy. The frontend reads
+  # this file straight from GitHub's CDN (raw.githubusercontent.com), and the
+  # commit step carries [skip ci] so Netlify does NOT rebuild for data updates.
+  # The repo is public, so Actions minutes are free/unlimited; 5 min is GitHub's
+  # scheduled minimum (runs can still be delayed a few minutes under load).
+  schedule:
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 permissions:

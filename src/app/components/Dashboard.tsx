@@ -88,6 +88,7 @@ export default function Dashboard() {
   const [pulsing, setPulsing] = useState<Set<string>>(() => new Set());
   const [nowTick, setNowTick] = useState(() => Date.now());
   const [statsOpen, setStatsOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [spikes, setSpikes] = useState<Stats["spikes"]>([]);
   const [snapshotStats, setSnapshotStats] = useState<Stats | null>(null);
   const [cursor, setCursor] = useState(0);
@@ -433,6 +434,44 @@ export default function Dashboard() {
             : "All time";
   const statsWindow = windowFor(dateRange, nowTick);
 
+  const activeFilterCount =
+    selectedCategories.length +
+    selectedSources.length +
+    watchlist.length +
+    (dateRange.preset !== "all" ? 1 : 0) +
+    (query.trim() ? 1 : 0);
+
+  // Province / Saved views / Digest / RSS — rendered in the city row on desktop
+  // and inside the collapsible filters on mobile.
+  const renderViewTools = () => (
+    <>
+      <ProvinceFilter onSelect={(slugs) => setSelectedCities(slugs)} />
+      <SavedViews
+        views={savedViews}
+        currentQuery={currentQuery}
+        onSave={(name, q) => setSavedViews((prev) => [...prev.filter((v) => v.name !== name), { name, query: q }])}
+        onApply={applyQuery}
+        onDelete={(name) => setSavedViews((prev) => prev.filter((v) => v.name !== name))}
+      />
+      <a
+        href={`/digest?cities=${selectedCities.join(",")}`}
+        title="Daily digest"
+        className="rounded-md border border-base-600 bg-base-800/50 px-2 py-1 text-xs text-slate-300 hover:bg-base-700/70"
+      >
+        Digest
+      </a>
+      <a
+        href={rssHref}
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Subscribe to this view as RSS"
+        className="rounded-md border border-base-600 bg-base-800/50 px-2 py-1 text-xs text-signal-warn hover:bg-base-700/70"
+      >
+        ⤵ RSS
+      </a>
+    </>
+  );
+
   return (
     <div className="flex h-screen flex-col overflow-hidden">
       {/* Header */}
@@ -494,31 +533,8 @@ export default function Dashboard() {
             onSelectAll={() => setSelectedCities([])}
           />
         </div>
-        <div className="flex shrink-0 items-center gap-2 border-l border-edge/70 px-3">
-          <ProvinceFilter onSelect={(slugs) => setSelectedCities(slugs)} />
-          <SavedViews
-            views={savedViews}
-            currentQuery={currentQuery}
-            onSave={(name, q) => setSavedViews((prev) => [...prev.filter((v) => v.name !== name), { name, query: q }])}
-            onApply={applyQuery}
-            onDelete={(name) => setSavedViews((prev) => prev.filter((v) => v.name !== name))}
-          />
-          <a
-            href={`/digest?cities=${selectedCities.join(",")}`}
-            title="Daily digest"
-            className="hidden rounded-md border border-base-600 bg-base-800/50 px-2 py-1 text-xs text-slate-300 hover:bg-base-700/70 md:inline-flex"
-          >
-            Digest
-          </a>
-          <a
-            href={rssHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Subscribe to this view as RSS"
-            className="rounded-md border border-base-600 bg-base-800/50 px-2 py-1 text-xs text-signal-warn hover:bg-base-700/70"
-          >
-            ⤵ RSS
-          </a>
+        <div className="hidden shrink-0 items-center gap-2 border-l border-edge/70 px-3 sm:flex">
+          {renderViewTools()}
         </div>
       </div>
 
@@ -549,37 +565,59 @@ export default function Dashboard() {
 
         {/* Feed panel */}
         <section className="flex min-h-0 flex-col bg-base-900/40">
-          <div className="flex flex-col gap-2 border-b border-edge/60 px-4 py-2.5">
-            <DateRangeFilter value={dateRange} now={nowTick} onChange={setDateRange} />
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              <CategoryFilter selected={selectedCategories} onToggle={toggleCategory} />
-              <SourceFilter
-                available={availableSources}
-                selected={selectedSources}
-                onToggle={toggleSource}
-                onClear={() => setSelectedSources([])}
+          <div className="border-b border-edge/60">
+            {/* Mobile-only toggle to reclaim feed space */}
+            <button
+              onClick={() => setFiltersOpen((o) => !o)}
+              className="flex w-full items-center justify-between px-4 py-2 sm:hidden"
+            >
+              <span className="font-mono text-[10px] uppercase tracking-widest text-muted">
+                Filters{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ""}
+              </span>
+              <span className="text-xs text-accent">{filtersOpen ? "▴ Hide" : "▾ Show"}</span>
+            </button>
+
+            <div className={`${filtersOpen ? "flex" : "hidden"} flex-col gap-2 px-4 pb-2.5 sm:flex sm:pt-2.5`}>
+              {/* Search is in the header on desktop; surface it here on mobile. */}
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search…"
+                aria-label="Search headlines"
+                className="rounded-md border border-base-600 bg-base-850/80 px-3 py-1.5 text-sm text-slate-200 placeholder:text-muted focus:border-accent/60 focus:outline-none sm:hidden"
               />
-              <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-slate-400">
-                <input type="checkbox" checked={clusterOn} onChange={(e) => setClusterOn(e.target.checked)} className="accent-accent" />
-                Group similar
-              </label>
-              <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-slate-400">
-                <input type="checkbox" checked={hideRead} onChange={(e) => setHideRead(e.target.checked)} className="accent-accent" />
-                Hide read
-              </label>
-              <label
-                className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-slate-400"
-                title="Only Pakistani outlets or articles that mention Pakistan"
-              >
-                <input type="checkbox" checked={localOnly} onChange={(e) => setLocalOnly(e.target.checked)} className="accent-accent" />
-                PK only
-              </label>
+              <DateRangeFilter value={dateRange} now={nowTick} onChange={setDateRange} />
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <CategoryFilter selected={selectedCategories} onToggle={toggleCategory} />
+                <SourceFilter
+                  available={availableSources}
+                  selected={selectedSources}
+                  onToggle={toggleSource}
+                  onClear={() => setSelectedSources([])}
+                />
+                <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-slate-400">
+                  <input type="checkbox" checked={clusterOn} onChange={(e) => setClusterOn(e.target.checked)} className="accent-accent" />
+                  Group similar
+                </label>
+                <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-slate-400">
+                  <input type="checkbox" checked={hideRead} onChange={(e) => setHideRead(e.target.checked)} className="accent-accent" />
+                  Hide read
+                </label>
+                <label
+                  className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-slate-400"
+                  title="Only Pakistani outlets or articles that mention Pakistan"
+                >
+                  <input type="checkbox" checked={localOnly} onChange={(e) => setLocalOnly(e.target.checked)} className="accent-accent" />
+                  PK only
+                </label>
+              </div>
+              <Watchlist
+                terms={watchlist}
+                onAdd={(t) => setWatchlist((prev) => (prev.includes(t) ? prev : [...prev, t]))}
+                onRemove={(t) => setWatchlist((prev) => prev.filter((x) => x !== t))}
+              />
+              <div className="flex flex-wrap items-center gap-2 sm:hidden">{renderViewTools()}</div>
             </div>
-            <Watchlist
-              terms={watchlist}
-              onAdd={(t) => setWatchlist((prev) => (prev.includes(t) ? prev : [...prev, t]))}
-              onRemove={(t) => setWatchlist((prev) => prev.filter((x) => x !== t))}
-            />
           </div>
 
           {paused && buffer.length > 0 && (

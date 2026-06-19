@@ -7,7 +7,7 @@ const nextConfig = {
   },
   // Keep the lowdb JSON file and other Node-only deps out of the bundle trace
   // noise; the poller runs only in the Node.js runtime.
-  serverExternalPackages: ["lowdb"],
+  serverExternalPackages: ["lowdb", "@netlify/blobs"],
 };
 
 export default nextConfig;

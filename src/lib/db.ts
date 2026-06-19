@@ -1,51 +1,29 @@
-import { join } from "node:path";
-import { mkdirSync } from "node:fs";
-import { Low } from "lowdb";
-import { JSONFilePreset } from "lowdb/node";
 import type { Article, Stats } from "@/lib/types";
 import { tokenize } from "@/lib/text";
 import { extractEntities } from "@/lib/entities";
+import { getArticleStore } from "@/lib/stores";
 
-interface Data {
-  articles: Article[];
-}
-
-const DATA_DIR = join(process.cwd(), "data");
-const DB_FILE = join(DATA_DIR, "db.json");
-
-/** Rolling-window cap so the JSON file stays small. */
+/** Rolling-window cap so the stored payload stays small. */
 const MAX_ARTICLES = 2000;
 
-let dbPromise: Promise<Low<Data>> | null = null;
-// In-memory id index for O(1) dedup without scanning the array.
-const seen = new Set<string>();
+const store = getArticleStore();
 
 function byNewest(a: Article, b: Article): number {
   return Date.parse(b.publishedAt) - Date.parse(a.publishedAt);
 }
 
-function getDb(): Promise<Low<Data>> {
-  if (!dbPromise) {
-    mkdirSync(DATA_DIR, { recursive: true });
-    dbPromise = JSONFilePreset<Data>(DB_FILE, { articles: [] }).then((db) => {
-      db.data.articles.sort(byNewest);
-      for (const a of db.data.articles) seen.add(a.id);
-      return db;
-    });
-  }
-  return dbPromise;
-}
-
 export async function initDb(): Promise<void> {
-  await getDb();
+  await store.load();
 }
 
 /**
- * Insert articles, skipping ones already stored (dedup by id).
+ * Insert articles, skipping ones already stored (dedup by id, computed from the
+ * loaded set so it works on both stateful and stateless backends).
  * Returns only the newly-added articles, newest first.
  */
 export async function insertMany(articles: Article[]): Promise<Article[]> {
-  const db = await getDb();
+  const existing = await store.load();
+  const seen = new Set(existing.map((a) => a.id));
 
   const fresh: Article[] = [];
   for (const a of articles) {
@@ -55,13 +33,8 @@ export async function insertMany(articles: Article[]): Promise<Article[]> {
   }
   if (fresh.length === 0) return [];
 
-  db.data.articles.push(...fresh);
-  db.data.articles.sort(byNewest);
-  if (db.data.articles.length > MAX_ARTICLES) {
-    const removed = db.data.articles.splice(MAX_ARTICLES);
-    for (const r of removed) seen.delete(r.id);
-  }
-  await db.write();
+  const merged = [...existing, ...fresh].sort(byNewest).slice(0, MAX_ARTICLES);
+  await store.save(merged);
 
   fresh.sort(byNewest);
   return fresh;
@@ -78,50 +51,42 @@ export interface QueryOpts {
   limit?: number;
 }
 
-/** Read recent articles, optionally filtered by city / category / search / date. */
+/** Read recent articles, newest-first, optionally filtered by city/category/search/date. */
 export async function getRecent(opts: QueryOpts = {}): Promise<Article[]> {
-  const db = await getDb();
   const { cities, categories, q, from, to, limit = 200 } = opts;
-
   const citySet = cities && cities.length ? new Set(cities) : null;
   const catSet = categories && categories.length ? new Set(categories) : null;
   const needle = q?.trim().toLowerCase();
   const fromMs = from ? Date.parse(from) : NaN;
   const toMs = to ? Date.parse(to) : NaN;
 
-  let items: Article[] = db.data.articles;
+  let items = await store.load();
   if (citySet) items = items.filter((a) => a.cities.some((c) => citySet.has(c)));
   if (catSet) items = items.filter((a) => a.categories.some((c) => catSet.has(c)));
   if (needle) {
     items = items.filter(
-      (a) =>
-        a.title.toLowerCase().includes(needle) ||
-        a.summary.toLowerCase().includes(needle),
+      (a) => a.title.toLowerCase().includes(needle) || a.summary.toLowerCase().includes(needle),
     );
   }
   if (!Number.isNaN(fromMs)) items = items.filter((a) => Date.parse(a.publishedAt) >= fromMs);
   if (!Number.isNaN(toMs)) items = items.filter((a) => Date.parse(a.publishedAt) <= toMs);
 
-  return items.slice(0, limit);
+  return [...items].sort(byNewest).slice(0, limit);
 }
 
-/** Per-city counts over the recent window — used to size the map nodes. */
+/** Per-city counts over the stored window — used to size the map nodes. */
 export async function cityCounts(): Promise<Record<string, number>> {
-  const db = await getDb();
+  const items = await store.load();
   const counts: Record<string, number> = {};
-  for (const a of db.data.articles) {
-    for (const c of a.cities) counts[c] = (counts[c] ?? 0) + 1;
-  }
+  for (const a of items) for (const c of a.cities) counts[c] = (counts[c] ?? 0) + 1;
   return counts;
 }
 
 /** Aggregate stats over the stored window, optionally scoped to cities. */
 export async function getStats(cities?: string[]): Promise<Stats> {
-  const db = await getDb();
+  const all = await store.load();
   const citySet = cities && cities.length ? new Set(cities) : null;
-  const items = citySet
-    ? db.data.articles.filter((a) => a.cities.some((c) => citySet.has(c)))
-    : db.data.articles;
+  const items = citySet ? all.filter((a) => a.cities.some((c) => citySet.has(c))) : all;
 
   const byCity: Record<string, number> = {};
   const byCategory: Record<string, number> = {};
@@ -151,7 +116,7 @@ export async function getStats(cities?: string[]): Promise<Stats> {
   // Spikes: per-city last-hour volume vs the mean of the prior 5 hours.
   // Computed over ALL articles (global signal), regardless of the city scope.
   const cityHourly: Record<string, number[]> = {};
-  for (const a of db.data.articles) {
+  for (const a of all) {
     const ageH = Math.floor((now - Date.parse(a.publishedAt)) / 3_600_000);
     if (ageH < 0 || ageH >= 6) continue;
     for (const c of a.cities) (cityHourly[c] ??= new Array(6).fill(0))[ageH]++;

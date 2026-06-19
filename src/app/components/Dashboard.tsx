@@ -27,6 +27,9 @@ const MAX_RENDERED = 300;
 const CITIES_KEY = "pak-monitor:cities";
 const SOURCES_KEY = "pak-monitor:sources";
 const DAY = 86_400_000;
+const POLL_REFRESH_MS = 30_000;
+// SSE on always-on hosts; "poll" (set via NEXT_PUBLIC_REALTIME) for serverless.
+const REALTIME: "sse" | "poll" = process.env.NEXT_PUBLIC_REALTIME === "poll" ? "poll" : "sse";
 
 function msToIso(ms: number | null): string {
   return ms == null ? "" : new Date(ms).toISOString();
@@ -202,7 +205,9 @@ export default function Dashboard() {
     );
   }, []);
 
-  // Backlog + live stream, keyed on city scope + date window.
+  // Backlog + live updates, keyed on city scope + date window. Realtime delivery
+  // is SSE on always-on hosts; on serverless (NEXT_PUBLIC_REALTIME=poll) it falls
+  // back to periodic re-fetching.
   useEffect(() => {
     if (!hydrated) return;
     const win = windowFor(dateRange, Date.now());
@@ -221,32 +226,7 @@ export default function Dashboard() {
     setPaused(false);
     setCursor(0);
 
-    const backlogParams = new URLSearchParams(qs);
-    backlogParams.set("limit", fromISO || toISO ? "500" : "200");
-
-    fetch(`/api/articles?${backlogParams.toString()}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (cancelled) return;
-        const list: Article[] = data.articles ?? [];
-        seenRef.current = new Set(list.map((a) => a.id));
-        setArticles(list);
-        setCounts(data.counts ?? {});
-      })
-      .catch(() => {});
-
-    const es = new EventSource(`/api/stream?${qs.toString()}`);
-    es.addEventListener("ready", () => {
-      if (!cancelled) setStatus("live");
-    });
-    es.addEventListener("article", (ev) => {
-      if (cancelled) return;
-      let a: Article;
-      try {
-        a = JSON.parse((ev as MessageEvent).data) as Article;
-      } catch {
-        return;
-      }
+    const handleIncoming = (a: Article) => {
       if (seenRef.current.has(a.id)) return;
       seenRef.current.add(a.id);
 
@@ -257,7 +237,6 @@ export default function Dashboard() {
       });
       triggerPulse(a.cities.filter((c) => selectedCities.length === 0 || selectedCities.includes(c)));
 
-      // Breaking-news alerts: watchlist hit OR a priority category.
       if (notifyRef.current) {
         const text = `${a.title} ${a.summary}`.toLowerCase();
         const watched = watchRef.current.some((w) => w.length >= 2 && text.includes(w.toLowerCase()));
@@ -271,14 +250,59 @@ export default function Dashboard() {
 
       if (pausedRef.current) setBuffer((prev) => [a, ...prev].slice(0, MAX_RENDERED));
       else setArticles((prev) => [a, ...prev].slice(0, MAX_RENDERED));
-    });
-    es.onerror = () => {
-      if (!cancelled) setStatus("closed");
     };
 
+    const backlogParams = new URLSearchParams(qs);
+    backlogParams.set("limit", fromISO || toISO ? "500" : "200");
+    const backlogUrl = `/api/articles?${backlogParams.toString()}`;
+
+    const loadBacklog = (initial: boolean) =>
+      fetch(backlogUrl)
+        .then((r) => r.json())
+        .then((data) => {
+          if (cancelled) return;
+          const list: Article[] = data.articles ?? [];
+          setCounts(data.counts ?? {});
+          if (initial) {
+            seenRef.current = new Set(list.map((a) => a.id));
+            setArticles(list);
+            if (REALTIME === "poll") setStatus("live");
+          } else {
+            // newest-first list; replay only the unseen ones oldest→newest
+            const fresh = list.filter((a) => !seenRef.current.has(a.id)).reverse();
+            for (const a of fresh) handleIncoming(a);
+          }
+        })
+        .catch(() => {});
+
+    loadBacklog(true);
+
+    if (REALTIME === "sse") {
+      const es = new EventSource(`/api/stream?${qs.toString()}`);
+      es.addEventListener("ready", () => {
+        if (!cancelled) setStatus("live");
+      });
+      es.addEventListener("article", (ev) => {
+        if (cancelled) return;
+        try {
+          handleIncoming(JSON.parse((ev as MessageEvent).data) as Article);
+        } catch {
+          /* ignore malformed event */
+        }
+      });
+      es.onerror = () => {
+        if (!cancelled) setStatus("closed");
+      };
+      return () => {
+        cancelled = true;
+        es.close();
+      };
+    }
+
+    const timer = setInterval(() => loadBacklog(false), POLL_REFRESH_MS);
     return () => {
       cancelled = true;
-      es.close();
+      clearInterval(timer);
     };
   }, [selectedCities, dateRange, hydrated, triggerPulse]);
 

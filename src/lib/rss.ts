@@ -15,7 +15,7 @@ export interface FetchResult {
 }
 
 const parser: Parser = new Parser({
-  timeout: 15_000,
+  timeout: Number(process.env.RSS_TIMEOUT_MS) || 15_000,
   headers: {
     "User-Agent": USER_AGENT,
     Accept: "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",

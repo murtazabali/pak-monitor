@@ -1,0 +1,18 @@
+[build]
+  command = "npm run build"
+
+# Official Next.js runtime (Netlify also auto-detects it).
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[functions]
+  node_bundler = "esbuild"
+
+# Recommended runtime config for Netlify's serverless model.
+# Secrets (CRON_SECRET, ALERT_WEBHOOK_URL) should be set in the Netlify UI,
+# NOT committed here.
+[build.environment]
+  STORAGE = "blobs"            # persist articles in Netlify Blobs
+  NEXT_PUBLIC_REALTIME = "poll" # client polls instead of SSE (serverless can't hold SSE)
+  GOOGLE_NEWS = "off"          # keep each ingest within the function timeout
+  RSS_TIMEOUT_MS = "6000"

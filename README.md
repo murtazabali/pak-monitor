@@ -2,13 +2,13 @@
 
 **A realtime news monitor for Pakistan.** Pick one or more cities and watch everything happening there stream in live — on a glowing map of Pakistan and a realtime feed. Default city is **Karachi**.
 
-[![CI](https://github.com/your-org/pak-monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/pak-monitor/actions/workflows/ci.yml)
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-org/pak-monitor)
+[![CI](https://github.com/murtazabali/pak-monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/murtazabali/pak-monitor/actions/workflows/ci.yml)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/murtazabali/pak-monitor)
 
 No API keys. No accounts. No database server. Just:
 
 ```bash
-git clone <your-repo-url> pak-monitor
+git clone https://github.com/murtazabali/pak-monitor.git
 cd pak-monitor
 nvm use            # uses Node 25 (see .nvmrc); Node 20+ works
 npm install        # pure-JS deps — no native build step

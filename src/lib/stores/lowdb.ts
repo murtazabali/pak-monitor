@@ -9,7 +9,10 @@ interface Data {
   articles: Article[];
 }
 
-const DATA_DIR = join(process.cwd(), "data");
+// On Lambda the working dir is read-only; only /tmp is writable. (lowdb is still
+// ephemeral/per-container there — use STORAGE=blobs for real serverless storage.)
+const DATA_DIR =
+  process.env.DATA_DIR ?? (process.env.LAMBDA_TASK_ROOT ? "/tmp/pak-monitor-data" : join(process.cwd(), "data"));
 const DB_FILE = join(DATA_DIR, "db.json");
 
 /** File-backed store (lowdb). The single process caches the data in memory. */

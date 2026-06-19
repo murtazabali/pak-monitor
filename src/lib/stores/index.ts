@@ -12,7 +12,10 @@ let instance: ArticleStore | null = null;
  */
 export function getArticleStore(): ArticleStore {
   if (!instance) {
-    const kind = process.env.STORAGE ?? (process.env.NETLIFY ? "blobs" : "lowdb");
+    // Explicit STORAGE wins; otherwise auto-pick Blobs when a Netlify runtime is
+    // detected (NETLIFY_BLOBS_CONTEXT is injected into Netlify functions).
+    const onNetlify = !!(process.env.NETLIFY || process.env.NETLIFY_BLOBS_CONTEXT);
+    const kind = process.env.STORAGE ?? (onNetlify ? "blobs" : "lowdb");
     instance = kind === "blobs" ? createBlobsStore() : createLowdbStore();
   }
   return instance;

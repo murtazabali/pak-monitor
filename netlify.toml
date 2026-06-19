@@ -8,11 +8,13 @@
 [functions]
   node_bundler = "esbuild"
 
-# Recommended runtime config for Netlify's serverless model.
-# Secrets (CRON_SECRET, ALERT_WEBHOOK_URL) should be set in the Netlify UI,
-# NOT committed here.
-[build.environment]
-  STORAGE = "blobs"            # persist articles in Netlify Blobs
-  NEXT_PUBLIC_REALTIME = "poll" # client polls instead of SSE (serverless can't hold SSE)
-  GOOGLE_NEWS = "off"          # keep each ingest within the function timeout
-  RSS_TIMEOUT_MS = "6000"
+# IMPORTANT: [build.environment] is BUILD-TIME ONLY and does NOT reach the
+# functions at runtime. Set these in the Netlify UI (Site configuration →
+# Environment variables) so both the build and the running functions see them:
+#
+#   STORAGE              = blobs        (serverless storage; lowdb can't persist on Lambda)
+#   DISABLE_POLLER       = 1            (no always-on process; ingest runs via the scheduled fn)
+#   NEXT_PUBLIC_REALTIME = poll         (client polls instead of SSE)
+#   GOOGLE_NEWS          = off          (keep each ingest within the function timeout)
+#   RSS_TIMEOUT_MS       = 6000
+#   CRON_SECRET          = <random>     (protects /api/ingest)

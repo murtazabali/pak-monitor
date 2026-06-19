@@ -157,9 +157,19 @@ You only need a server because **browsers can't read cross-origin RSS feeds (COR
 
 ### Netlify (serverless)
 
-1. Connect the repo to Netlify (it auto-detects Next.js). [`netlify.toml`](netlify.toml) already sets `STORAGE=blobs`, `NEXT_PUBLIC_REALTIME=poll`, `GOOGLE_NEWS=off`.
-2. In the Netlify UI set a `CRON_SECRET` (and optionally `ALERT_WEBHOOK_URL`).
-3. [`netlify/functions/ingest-scheduled.mts`](netlify/functions/ingest-scheduled.mts) pings `/api/ingest` every 2 minutes to refresh the data in Netlify Blobs.
+1. Connect the repo to Netlify (it auto-detects Next.js).
+2. In **Site configuration → Environment variables**, add these — they must be set **here, not in `netlify.toml`**, because `[build.environment]` is build-time only and won't reach the functions at runtime:
+
+   | Variable | Value |
+   |---|---|
+   | `STORAGE` | `blobs` |
+   | `DISABLE_POLLER` | `1` |
+   | `NEXT_PUBLIC_REALTIME` | `poll` |
+   | `GOOGLE_NEWS` | `off` |
+   | `RSS_TIMEOUT_MS` | `6000` |
+   | `CRON_SECRET` | a random string (`openssl rand -hex 32`) |
+
+3. Redeploy. The scheduled function pings `/api/ingest` every 2 min to refresh data in **Netlify Blobs**; the dashboard polls `/api/articles`. Seed it once without waiting: `curl -H "x-cron-secret: <secret>" https://<your-site>/api/ingest`.
 
 ### Static-JSON (no live backend)
 

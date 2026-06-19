@@ -2,6 +2,7 @@ import { ENABLED_FEEDS } from "@/config/feeds";
 import { initDb } from "@/lib/db";
 import { runIngestCycle } from "@/lib/ingest";
 import { webhookEnabled } from "@/lib/webhook";
+import { isServerless } from "@/lib/env";
 
 const POLL_INTERVAL_MS = Number(process.env.POLL_INTERVAL_MS) || 90_000;
 
@@ -12,9 +13,11 @@ const g = globalThis as unknown as { __pakMonitorPollerStarted?: boolean };
 export function startPoller(): void {
   if (g.__pakMonitorPollerStarted) return;
 
-  // On serverless there's no always-on process, so the interval is pointless —
-  // ingestion runs via the /api/ingest endpoint hit by a scheduled cron instead.
-  if (process.env.DISABLE_POLLER === "1" || process.env.NETLIFY) return;
+  // On serverless there's no always-on process, so the interval is pointless
+  // (and the read-only filesystem breaks the file store) — ingestion runs via
+  // the /api/ingest endpoint hit by a scheduled cron instead. Auto-detected so
+  // it's safe even if DISABLE_POLLER isn't set.
+  if (process.env.DISABLE_POLLER === "1" || isServerless()) return;
 
   g.__pakMonitorPollerStarted = true;
 

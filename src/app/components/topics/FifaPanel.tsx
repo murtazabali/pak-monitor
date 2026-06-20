@@ -134,6 +134,11 @@ export default function FifaPanel({ data }: { data: unknown }) {
       <div className="flex flex-wrap items-end justify-between gap-2 rounded-xl border border-edge/70 bg-base-850/60 px-5 py-3">
         <p className="font-mono text-sm font-bold text-slate-100">
           {fifa.league} {fifa.season}
+          {fifa.season === 2026 && (
+            <span className="ml-1.5 font-normal" title="Hosts: Canada, Mexico & USA">
+              🇨🇦 🇲🇽 🇺🇸
+            </span>
+          )}
         </p>
         <p className="font-mono text-[11px] text-muted">updated {asOfLabel}</p>
       </div>

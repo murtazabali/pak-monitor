@@ -10,9 +10,11 @@ test.describe("Static snapshot", () => {
     expect(res.ok()).toBeTruthy();
 
     const body = await res.json();
+    expect(typeof body.generatedAt).toBe("string");
     expect(Array.isArray(body.articles)).toBe(true);
-    expect(typeof body.counts).toBe("object");
     expect(typeof body.stats).toBe("object");
+    // Topic data (Stocks, FIFA, …) is embedded per slug; values may be null.
+    expect(typeof body.topics).toBe("object");
 
     // Every article has the required shape.
     for (const a of body.articles.slice(0, 5)) {

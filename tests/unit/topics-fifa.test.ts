@@ -1,8 +1,16 @@
 import { describe, it, expect } from "vitest";
 import { parseScoreboard } from "@/lib/topics/fifa";
 
-// Mirrors the shape of ESPN's soccer scoreboard payload.
-const event = (id: string, state: string, date: string, h: [string, string, number | null], a: [string, string, number | null]) => ({
+// Mirrors the shape of ESPN's soccer scoreboard payload. `team.id` = abbr so
+// scoring-play details can be attributed back to a side.
+const event = (
+  id: string,
+  state: string,
+  date: string,
+  h: [string, string, number | null],
+  a: [string, string, number | null],
+  details: unknown[] = [],
+) => ({
   id,
   date,
   season: { slug: "group-stage", year: 2026 },
@@ -10,18 +18,32 @@ const event = (id: string, state: string, date: string, h: [string, string, numb
   competitions: [
     {
       competitors: [
-        { homeAway: "home", score: h[2] == null ? "" : String(h[2]), winner: false, team: { displayName: h[0], abbreviation: h[1], logo: "x.png" } },
-        { homeAway: "away", score: a[2] == null ? "" : String(a[2]), winner: false, team: { displayName: a[0], abbreviation: a[1], logo: "y.png" } },
+        { homeAway: "home", score: h[2] == null ? "" : String(h[2]), winner: false, team: { id: h[1], displayName: h[0], abbreviation: h[1], logo: "x.png" } },
+        { homeAway: "away", score: a[2] == null ? "" : String(a[2]), winner: false, team: { id: a[1], displayName: a[0], abbreviation: a[1], logo: "y.png" } },
       ],
+      details,
     },
   ],
+});
+
+const goal = (teamId: string, minute: string, player: string, extra: object = {}) => ({
+  scoringPlay: true,
+  team: { id: teamId },
+  clock: { displayValue: minute },
+  athletesInvolved: [{ shortName: player }],
+  ...extra,
 });
 
 const SCOREBOARD = {
   leagues: [{ name: "FIFA World Cup" }],
   season: { year: 2026 },
   events: [
-    event("e1", "post", "2026-06-19T17:00Z", ["Netherlands", "NED", 5], ["Sweden", "SWE", 1]),
+    event("e1", "post", "2026-06-19T17:00Z", ["Netherlands", "NED", 5], ["Sweden", "SWE", 1], [
+      goal("NED", "5'", "B. Brobbey"),
+      goal("NED", "17'", "B. Brobbey"),
+      goal("SWE", "59'", "A. Elanga", { penaltyKick: true }),
+      { scoringPlay: false, type: { text: "Yellow Card" }, team: { id: "NED" }, athletesInvolved: [{ shortName: "X. Y" }] },
+    ]),
     event("e2", "post", "2026-06-20T17:00Z", ["Germany", "GER", 2], ["Ivory Coast", "CIV", 0]),
     event("e3", "in", "2026-06-21T20:00Z", ["Brazil", "BRA", 1], ["Spain", "ESP", 1]),
     event("e4", "pre", "2026-06-22T18:00Z", ["Ecuador", "ECU", null], ["Curacao", "CUW", null]),
@@ -53,5 +75,16 @@ describe("parseScoreboard", () => {
 
   it("leaves upcoming scores null", () => {
     expect(r.upcoming[0].home.score).toBeNull();
+  });
+
+  it("parses goalscorers with minutes (and penalty/own-goal notes), ignoring non-goals", () => {
+    const e1 = r.recent.find((m) => m.id === "e1")!;
+    expect(e1.home.goals.map((g) => `${g.player} ${g.minute}`)).toEqual([
+      "B. Brobbey 5'",
+      "B. Brobbey 17'",
+    ]);
+    expect(e1.away.goals).toEqual([{ player: "A. Elanga", minute: "59'", note: "P" }]);
+    // The yellow-card detail (scoringPlay: false) is not counted as a goal.
+    expect(e1.home.goals.length + e1.away.goals.length).toBe(3);
   });
 });

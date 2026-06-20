@@ -1,4 +1,4 @@
-import type { FifaMatch, FifaSnapshot, FifaTeam } from "@/lib/types";
+import type { FifaGoal, FifaMatch, FifaSnapshot, FifaTeam } from "@/lib/types";
 
 /**
  * FIFA topic provider — FIFA World Cup fixtures & results from ESPN's public
@@ -21,7 +21,15 @@ interface EspnCompetitor {
   homeAway?: string;
   score?: string;
   winner?: boolean;
-  team?: { displayName?: string; abbreviation?: string; logo?: string };
+  team?: { id?: string; displayName?: string; abbreviation?: string; logo?: string };
+}
+interface EspnDetail {
+  scoringPlay?: boolean;
+  ownGoal?: boolean;
+  penaltyKick?: boolean;
+  team?: { id?: string };
+  clock?: { displayValue?: string };
+  athletesInvolved?: Array<{ displayName?: string; shortName?: string }>;
 }
 interface EspnEvent {
   id?: string;
@@ -31,6 +39,7 @@ interface EspnEvent {
   competitions?: Array<{
     notes?: Array<{ headline?: string }>;
     competitors?: EspnCompetitor[];
+    details?: EspnDetail[];
   }>;
 }
 interface EspnScoreboard {
@@ -45,13 +54,32 @@ function prettyRound(slug: string | undefined, note: string | undefined): string
   return slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function toTeam(c: EspnCompetitor | undefined): FifaTeam {
+/** Goalscorers from a competition's scoring plays, grouped by team id. */
+function goalsByTeam(details: EspnDetail[] | undefined): Record<string, FifaGoal[]> {
+  const out: Record<string, FifaGoal[]> = {};
+  for (const d of details ?? []) {
+    if (!d.scoringPlay) continue;
+    const teamId = d.team?.id;
+    const player = d.athletesInvolved?.[0]?.shortName || d.athletesInvolved?.[0]?.displayName;
+    if (!teamId || !player) continue;
+    const goal: FifaGoal = {
+      player,
+      minute: d.clock?.displayValue ?? "",
+      ...(d.ownGoal ? { note: "OG" } : d.penaltyKick ? { note: "P" } : {}),
+    };
+    (out[teamId] ??= []).push(goal);
+  }
+  return out;
+}
+
+function toTeam(c: EspnCompetitor | undefined, goals: FifaGoal[]): FifaTeam {
   return {
     name: c?.team?.displayName ?? "TBD",
     abbr: c?.team?.abbreviation ?? "—",
     logo: c?.team?.logo ?? null,
     score: c?.score != null && c.score !== "" ? Number(c.score) : null,
     winner: !!c?.winner,
+    goals,
   };
 }
 
@@ -66,14 +94,15 @@ function toMatch(e: EspnEvent): FifaMatch | null {
   let date = e.date ?? "";
   const ms = Date.parse(date);
   if (!Number.isNaN(ms)) date = new Date(ms).toISOString();
+  const goals = goalsByTeam(comp?.details);
   return {
     id: e.id,
     date,
     state,
     status: e.status?.type?.shortDetail ?? "",
     round: prettyRound(e.season?.slug, comp?.notes?.[0]?.headline),
-    home: toTeam(home),
-    away: toTeam(away),
+    home: toTeam(home, goals[home.team?.id ?? ""] ?? []),
+    away: toTeam(away, goals[away.team?.id ?? ""] ?? []),
   };
 }
 

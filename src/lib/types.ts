@@ -126,6 +126,16 @@ export interface MarketSnapshot {
   losers: Mover[];
 }
 
+/** A goal scored in a match. */
+export interface FifaGoal {
+  /** Scorer's short name, e.g. "B. Brobbey". */
+  player: string;
+  /** Match minute, e.g. "45'", "90'+2'". */
+  minute: string;
+  /** "OG" (own goal) or "P" (penalty), when applicable. */
+  note?: string;
+}
+
 /** One side of a football fixture. */
 export interface FifaTeam {
   name: string;
@@ -134,6 +144,8 @@ export interface FifaTeam {
   /** Goals; null before kickoff. */
   score: number | null;
   winner: boolean;
+  /** Goalscorers for this side (chronological). */
+  goals: FifaGoal[];
 }
 
 /** A single FIFA World Cup match (fixture or result). */

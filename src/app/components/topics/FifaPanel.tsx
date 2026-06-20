@@ -1,6 +1,6 @@
 "use client";
 
-import type { FifaMatch, FifaSnapshot } from "@/lib/types";
+import type { FifaGoal, FifaMatch, FifaSnapshot } from "@/lib/types";
 
 function kickoff(iso: string): string {
   const ms = Date.parse(iso);
@@ -12,6 +12,21 @@ function kickoff(iso: string): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+/** Group goals by scorer → "B. Brobbey 5', 17'" (penalties/own-goals marked). */
+function groupScorers(goals: FifaGoal[]): string[] {
+  const order: string[] = [];
+  const mins = new Map<string, string[]>();
+  for (const g of goals) {
+    const min = g.note ? `${g.minute} (${g.note})` : g.minute;
+    if (!mins.has(g.player)) {
+      mins.set(g.player, []);
+      order.push(g.player);
+    }
+    mins.get(g.player)!.push(min);
+  }
+  return order.map((p) => `${p} ${mins.get(p)!.join(", ")}`);
 }
 
 function TeamSide({ name, abbr, logo, align }: { name: string; abbr: string; logo: string | null; align: "left" | "right" }) {
@@ -31,23 +46,43 @@ function MatchRow({ m }: { m: FifaMatch }) {
   const live = m.state === "in";
   const done = m.state === "post";
   const scoreText = m.home.score != null && m.away.score != null ? `${m.home.score} – ${m.away.score}` : "v";
+  const homeGoals = groupScorers(m.home.goals ?? []);
+  const awayGoals = groupScorers(m.away.goals ?? []);
+  const hasGoals = homeGoals.length > 0 || awayGoals.length > 0;
   return (
-    <div className="flex items-center gap-3 py-2">
-      <TeamSide {...m.home} align="left" />
-      <div className="flex w-24 shrink-0 flex-col items-center">
-        <span
-          className={[
-            "font-mono tabular-nums",
-            done || live ? "text-base font-semibold text-slate-100" : "text-xs text-muted",
-          ].join(" ")}
-        >
-          {m.state === "pre" ? "vs" : scoreText}
-        </span>
-        <span className={`mt-0.5 font-mono text-[10px] ${live ? "text-signal-live" : "text-muted"}`}>
-          {live ? `● ${m.status || "LIVE"}` : m.state === "pre" ? kickoff(m.date) : m.status || "FT"}
-        </span>
+    <div className="py-2">
+      <div className="flex items-center gap-3">
+        <TeamSide {...m.home} align="left" />
+        <div className="flex w-36 shrink-0 flex-col items-center">
+          <span
+            className={[
+              "font-mono tabular-nums",
+              done || live ? "text-base font-semibold text-slate-100" : "text-xs text-muted",
+            ].join(" ")}
+          >
+            {m.state === "pre" ? "vs" : scoreText}
+          </span>
+          <span className={`mt-0.5 whitespace-nowrap font-mono text-[10px] ${live ? "text-signal-live" : "text-muted"}`}>
+            {live ? `● ${m.status || "LIVE"}` : m.state === "pre" ? kickoff(m.date) : m.status || "FT"}
+          </span>
+        </div>
+        <TeamSide {...m.away} align="right" />
       </div>
-      <TeamSide {...m.away} align="right" />
+      {hasGoals && (
+        <div className="mt-1 flex items-start gap-3 text-[10px] leading-snug text-muted">
+          <div className="min-w-0 flex-1 space-y-0.5">
+            {homeGoals.map((s, i) => (
+              <div key={i} className="truncate">⚽ {s}</div>
+            ))}
+          </div>
+          <div className="w-36 shrink-0" />
+          <div className="min-w-0 flex-1 space-y-0.5 text-right">
+            {awayGoals.map((s, i) => (
+              <div key={i} className="truncate">{s} ⚽</div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

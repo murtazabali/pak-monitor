@@ -7,7 +7,7 @@ name: Snapshot
 on:
   # Refreshes public/data/snapshot.json for the static deploy. The frontend reads
   # this file straight from GitHub's CDN (raw.githubusercontent.com), and the
-  # commit step carries [skip ci] so Netlify does NOT rebuild for data updates.
+  # commit step carries [skip ci] so the static host does NOT rebuild for data.
   # The repo is public, so Actions minutes are free/unlimited; 5 min is GitHub's
   # scheduled minimum (runs can still be delayed a few minutes under load).
   schedule:

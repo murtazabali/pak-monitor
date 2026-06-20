@@ -699,9 +699,30 @@ export default function Dashboard() {
                 aria-label="Search headlines"
                 className="rounded-md border border-base-600 bg-base-850/80 px-3 py-1.5 text-sm text-slate-200 placeholder:text-muted focus:border-accent/60 focus:outline-none sm:hidden"
               />
+              {/* Row 1: time window (left) + view toggles (right) — keeps the
+                  date pills off the category line so neither wraps awkwardly. */}
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <DateRangeFilter value={dateRange} onChange={setDateRange} />
-                <span className="hidden h-4 w-px bg-edge/70 sm:block" />
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:ml-auto">
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-slate-400">
+                    <input type="checkbox" checked={clusterOn} onChange={(e) => setClusterOn(e.target.checked)} className="accent-accent" />
+                    Group similar
+                  </label>
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-slate-400">
+                    <input type="checkbox" checked={hideRead} onChange={(e) => setHideRead(e.target.checked)} className="accent-accent" />
+                    Hide read
+                  </label>
+                  <label
+                    className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-slate-400"
+                    title="Only Pakistani outlets or articles that mention Pakistan"
+                  >
+                    <input type="checkbox" checked={localOnly} onChange={(e) => setLocalOnly(e.target.checked)} className="accent-accent" />
+                    PK only
+                  </label>
+                </div>
+              </div>
+              {/* Row 2: topic + source filters. */}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <CategoryFilter selected={selectedCategories} onToggle={toggleCategory} />
                 <SourceFilter
                   available={availableSources}
@@ -709,21 +730,6 @@ export default function Dashboard() {
                   onToggle={toggleSource}
                   onClear={() => setSelectedSources([])}
                 />
-                <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-slate-400">
-                  <input type="checkbox" checked={clusterOn} onChange={(e) => setClusterOn(e.target.checked)} className="accent-accent" />
-                  Group similar
-                </label>
-                <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-slate-400">
-                  <input type="checkbox" checked={hideRead} onChange={(e) => setHideRead(e.target.checked)} className="accent-accent" />
-                  Hide read
-                </label>
-                <label
-                  className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-slate-400"
-                  title="Only Pakistani outlets or articles that mention Pakistan"
-                >
-                  <input type="checkbox" checked={localOnly} onChange={(e) => setLocalOnly(e.target.checked)} className="accent-accent" />
-                  PK only
-                </label>
               </div>
               <Watchlist
                 terms={watchlist}

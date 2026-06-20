@@ -72,13 +72,13 @@ function MatchRow({ m }: { m: FifaMatch }) {
         <div className="mt-1 flex items-start gap-3 text-[10px] leading-snug text-muted">
           <div className="min-w-0 flex-1 space-y-0.5">
             {homeGoals.map((s, i) => (
-              <div key={i} className="truncate">⚽ {s}</div>
+              <div key={i} className="truncate" title={s}>⚽ {s}</div>
             ))}
           </div>
           <div className="w-36 shrink-0" />
           <div className="min-w-0 flex-1 space-y-0.5 text-right">
             {awayGoals.map((s, i) => (
-              <div key={i} className="truncate">{s} ⚽</div>
+              <div key={i} className="truncate" title={s}>{s} ⚽</div>
             ))}
           </div>
         </div>

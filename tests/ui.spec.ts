@@ -87,14 +87,15 @@ async function mockApi(page: Page, opts: { backlog?: Article[] } = {}) {
 
 // ── Tests ───────────────────────────────────────────────────────────────────
 test.describe("Dashboard UI", () => {
-  test("renders the shell, default Karachi scope, the map and the backlog", async ({ page }) => {
+  test("renders the shell, default All Pakistan scope, the map and the backlog", async ({ page }) => {
     await mockApi(page);
     await page.goto("/");
 
     await expect(page.getByRole("heading", { name: /PAK/ })).toBeVisible();
 
-    // Karachi is the default selected city chip.
+    // Defaults to All Pakistan (no city pre-selected); the city chips still render.
     await expect(page.getByRole("button", { name: /^Karachi/ })).toBeVisible();
+    await expect(page.getByRole("main").getByText("All Pakistan")).toBeVisible();
 
     // Backlog articles render.
     await expect(page.getByText(ALPHA.title)).toBeVisible();
@@ -152,6 +153,9 @@ test.describe("Dashboard UI", () => {
     // The market panel only appears once the Stocks filter is active.
     await expect(page.getByText("178,922.75")).toHaveCount(0);
 
+    // Narrow to Lahore first: the stocks view is national (PSX), so it must
+    // ignore the city scope — the Karachi-tagged stock story still shows.
+    await page.getByRole("button", { name: /^Lahore/ }).click();
     await page.getByRole("button", { name: "Stocks" }).click();
 
     await expect(page.getByText("178,922.75")).toBeVisible();
@@ -161,11 +165,12 @@ test.describe("Dashboard UI", () => {
     await expect(page.getByText(BETA.title)).toHaveCount(0);
   });
 
-  test("selecting another city updates the live scope label", async ({ page }) => {
+  test("selecting cities updates the live scope label", async ({ page }) => {
     await mockApi(page);
     await page.goto("/");
+    // Defaults to All Pakistan; pick two cities to get a unique combined label.
+    await page.getByRole("button", { name: /^Karachi/ }).click();
     await page.getByRole("button", { name: /^Lahore/ }).click();
-    // Scope label in the map panel reflects the new selection.
     await expect(page.getByText("Karachi, Lahore")).toBeVisible();
   });
 

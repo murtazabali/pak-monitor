@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CITIES, DEFAULT_CITY, CITY_BY_SLUG } from "@/config/cities";
+import { CITIES, CITY_BY_SLUG } from "@/config/cities";
 import type { Article, MarketSnapshot, Stats } from "@/lib/types";
 import { clusterArticles, type Cluster } from "@/lib/cluster";
 import { articlesToCsv, download } from "@/lib/csv";
@@ -69,7 +69,8 @@ function singleton(a: Article): Cluster {
 
 export default function Dashboard() {
   // URL-synced filters
-  const [selectedCities, setSelectedCities] = useState<string[]>([DEFAULT_CITY]);
+  // Default to All Pakistan (empty = no city filter); users can narrow to cities.
+  const [selectedCities, setSelectedCities] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const [query, setQuery] = useState("");
@@ -129,7 +130,7 @@ export default function Dashboard() {
       const v = sp.get(k);
       return v ? v.split(",").filter(Boolean) : null;
     };
-    setSelectedCities(list("c") ?? (ls(CITIES_KEY) as string[] | null) ?? [DEFAULT_CITY]);
+    setSelectedCities(list("c") ?? (ls(CITIES_KEY) as string[] | null) ?? []);
     setSelectedSources(list("src") ?? (ls(SOURCES_KEY) as string[] | null) ?? []);
     setSelectedCategories(list("cat") ?? []);
     setQuery(sp.get("q") ?? "");
@@ -400,7 +401,9 @@ export default function Dashboard() {
     const cats = new Set(selectedCategories);
     if (cats.has("stocks")) cats.add("business");
     const srcs = new Set(selectedSources);
-    const citySet = selectedCities.length ? new Set(selectedCities) : null;
+    // Stocks/markets is a national (PSX) view — ignore the city scope so
+    // nationwide market news (which often carries no city tag) isn't dropped.
+    const citySet = selectedCities.length && !stocksView ? new Set(selectedCities) : null;
     const needle = query.trim().toLowerCase();
     const { fromMs, toMs } = windowFor(dateRange, nowTick);
     const filtered = articles.filter((a) => {

@@ -323,6 +323,29 @@ test.describe("Dashboard UI", () => {
     await expect(page.getByText("Statistics")).toHaveCount(0);
   });
 
+  test("a scroll-to-top button appears after scrolling and returns to the top", async ({ page }) => {
+    const many = Array.from({ length: 40 }, (_, i) =>
+      makeArticle({ id: `m${i}`, title: `ZZ Scroll fixture headline number ${i}` }),
+    );
+    await mockApi(page, { backlog: many });
+    await page.goto("/");
+    // One card per article (the fixtures share tokens and would otherwise cluster
+    // into a single short card that can't scroll).
+    await page.getByRole("checkbox", { name: "Group similar" }).uncheck();
+
+    const feed = page.getByTestId("feed-scroll");
+    await expect(page.getByText(many[0].title)).toBeVisible();
+    // Hidden at the top.
+    await expect(page.getByRole("button", { name: "Scroll to top" })).toHaveCount(0);
+
+    await feed.evaluate((el) => el.scrollTo(0, 1500));
+    const btn = page.getByRole("button", { name: "Scroll to top" });
+    await expect(btn).toBeVisible();
+
+    await btn.click();
+    await expect.poll(() => feed.evaluate((el) => el.scrollTop)).toBeLessThan(50);
+  });
+
   test("the CSV export button is present", async ({ page }) => {
     await mockApi(page);
     await page.goto("/");

@@ -95,6 +95,7 @@ export default function Dashboard() {
   const [pulsing, setPulsing] = useState<Set<string>>(() => new Set());
   const [nowTick, setNowTick] = useState(() => Date.now());
   const [statsOpen, setStatsOpen] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const [loading, setLoading] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [mapOpen, setMapOpen] = useLocalStorage<boolean>("pak-monitor:map", true);
@@ -107,6 +108,7 @@ export default function Dashboard() {
   cursorRef.current = cursor;
   const clustersRef = useRef<Cluster[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
+  const feedScrollRef = useRef<HTMLDivElement>(null);
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
   const seenRef = useRef<Set<string>>(new Set());
@@ -362,6 +364,13 @@ export default function Dashboard() {
     const t = setTimeout(() => setLoading(false), 300);
     return () => clearTimeout(t);
   }, [selectedCategories, selectedSources, query, clusterOn, hideRead, localOnly]);
+
+  // Reset the feed to the top when the category changes, so the topic panel
+  // (Stocks/FIFA) and the newest matching articles are immediately in view
+  // rather than landing mid-feed at the previous scroll position.
+  useEffect(() => {
+    feedScrollRef.current?.scrollTo({ top: 0 });
+  }, [selectedCategories]);
 
   const flush = useCallback(() => {
     setArticles((prev) => [...buffer, ...prev].slice(0, MAX_RENDERED));
@@ -681,7 +690,7 @@ export default function Dashboard() {
         </section>
 
         {/* Feed panel */}
-        <section className="flex min-h-0 flex-col bg-base-900/40">
+        <section className="relative flex min-h-0 flex-col bg-base-900/40">
           {!mapOpen && (
             <button
               onClick={() => setMapOpen(true)}
@@ -761,7 +770,12 @@ export default function Dashboard() {
             </button>
           )}
 
-          <div className="scroll-thin relative min-h-0 flex-1 overflow-y-auto px-4 py-3">
+          <div
+            ref={feedScrollRef}
+            data-testid="feed-scroll"
+            onScroll={(e) => setShowScrollTop(e.currentTarget.scrollTop > 400)}
+            className="scroll-thin relative min-h-0 flex-1 overflow-y-auto px-4 py-3"
+          >
             {loading && (
               <div className="pointer-events-none sticky top-0 z-10 -mt-1 mb-1 flex justify-center">
                 <span className="inline-flex items-center gap-2 rounded-full border border-edge bg-base-850/95 px-3 py-1 text-xs text-accent shadow-lg backdrop-blur">
@@ -795,6 +809,17 @@ export default function Dashboard() {
               }
             />
           </div>
+
+          {showScrollTop && (
+            <button
+              onClick={() => feedScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
+              title="Scroll to top"
+              aria-label="Scroll to top"
+              className="absolute bottom-4 right-4 z-20 flex h-9 w-9 animate-fade-in items-center justify-center rounded-full border border-edge bg-base-800/90 text-base text-accent shadow-lg backdrop-blur transition-colors hover:bg-base-700"
+            >
+              ↑
+            </button>
+          )}
         </section>
       </main>
 

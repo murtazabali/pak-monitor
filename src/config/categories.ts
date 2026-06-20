@@ -31,7 +31,9 @@ const TOPIC_CATEGORIES: CategoryMeta[] = TOPICS.map((t) => ({
 
 const GENERAL: CategoryMeta = { slug: "general", label: "General", color: "#94a3b8" };
 
-export const CATEGORIES: CategoryMeta[] = [...BASE, ...TOPIC_CATEGORIES, GENERAL];
+// Topic chips (Stocks, FIFA, …) lead the filter row so the trending sections are
+// the first thing users see, followed by the base categories and General.
+export const CATEGORIES: CategoryMeta[] = [...TOPIC_CATEGORIES, ...BASE, GENERAL];
 
 export const CATEGORY_BY_SLUG: Record<string, CategoryMeta> = Object.fromEntries(
   CATEGORIES.map((c) => [c.slug, c]),

@@ -60,6 +60,35 @@ export interface TopicConfig {
 
 export const TOPICS: TopicConfig[] = [
   {
+    slug: "fifa",
+    label: "FIFA",
+    icon: "⚽",
+    color: "#38bdf8",
+    keywords: [
+      "fifa", "world cup", "fifa world cup", "world cup 2026", "uefa",
+      "champions league", "premier league", "la liga", "serie a", "bundesliga",
+      "ballon d'or", "messi", "ronaldo", "mbappe", "neymar", "haaland",
+      "group stage",
+    ],
+    // FIFA is global football: ignore city scope and the PK-only relevance
+    // filter, so foreign World Cup coverage (otherwise filtered out) shows here.
+    scope: { nationwide: true, global: true },
+    page: {
+      title: "FIFA World Cup 2026 — Fixtures, Results & News",
+      description:
+        "Live FIFA World Cup 2026 scores, upcoming fixtures, recent results and the latest football headlines — updated automatically.",
+      heading: "⚽ FIFA World Cup 2026",
+      blurb:
+        "Live scores, upcoming fixtures, recent results and the latest football headlines from the FIFA World Cup.",
+      newsHeading: "📰 Football & World Cup news",
+      newsEmpty: "No football stories in the latest snapshot yet.",
+      keywords: [
+        "FIFA World Cup", "World Cup 2026", "World Cup fixtures",
+        "World Cup results", "World Cup scores", "football news",
+      ],
+    },
+  },
+  {
     slug: "stocks",
     label: "Stocks",
     icon: "📈",
@@ -90,35 +119,6 @@ export const TOPICS: TopicConfig[] = [
         "KSE-100", "KSE 100 index", "PSX", "Pakistan Stock Exchange",
         "Pakistan stocks", "PSX market watch", "KSE-100 today",
         "Pakistan stock market news",
-      ],
-    },
-  },
-  {
-    slug: "fifa",
-    label: "FIFA",
-    icon: "⚽",
-    color: "#38bdf8",
-    keywords: [
-      "fifa", "world cup", "fifa world cup", "world cup 2026", "uefa",
-      "champions league", "premier league", "la liga", "serie a", "bundesliga",
-      "ballon d'or", "messi", "ronaldo", "mbappe", "neymar", "haaland",
-      "group stage",
-    ],
-    // FIFA is global football: ignore city scope and the PK-only relevance
-    // filter, so foreign World Cup coverage (otherwise filtered out) shows here.
-    scope: { nationwide: true, global: true },
-    page: {
-      title: "FIFA World Cup 2026 — Fixtures, Results & News",
-      description:
-        "Live FIFA World Cup 2026 scores, upcoming fixtures, recent results and the latest football headlines — updated automatically.",
-      heading: "⚽ FIFA World Cup 2026",
-      blurb:
-        "Live scores, upcoming fixtures, recent results and the latest football headlines from the FIFA World Cup.",
-      newsHeading: "📰 Football & World Cup news",
-      newsEmpty: "No football stories in the latest snapshot yet.",
-      keywords: [
-        "FIFA World Cup", "World Cup 2026", "World Cup fixtures",
-        "World Cup results", "World Cup scores", "football news",
       ],
     },
   },

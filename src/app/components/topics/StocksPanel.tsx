@@ -53,11 +53,12 @@ function MoverTable({ title, rows, accent }: { title: string; rows: Mover[]; acc
 }
 
 /**
- * KSE-100 hero + gainers/losers, rendered from the cron-built market snapshot.
- * Renders a graceful placeholder when market data is missing (cron failed, or an
- * older snapshot without the field).
+ * Stocks panel: KSE-100 hero + gainers/losers, rendered from the topic's
+ * snapshot data. Renders a graceful placeholder when the data is missing.
  */
-export default function MarketPanel({ market }: { market: MarketSnapshot | null | undefined }) {
+export default function StocksPanel({ data }: { data: unknown }) {
+  const market = (data ?? null) as MarketSnapshot | null;
+
   if (!market) {
     return (
       <div className="rounded-xl border border-edge/70 bg-base-850/40 p-5 text-center text-sm text-muted">

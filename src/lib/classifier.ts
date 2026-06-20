@@ -1,9 +1,10 @@
 import type { Category } from "@/lib/types";
 import { wholeWordRegex } from "@/lib/text";
+import { TOPICS } from "@/config/topics";
 
 // Lightweight keyword classifier. Pure heuristic — no API. An article can match
 // several categories; if none match it falls back to "general".
-const RULES: Array<{ category: Category; terms: string[] }> = [
+const BASE_RULES: Array<{ category: Category; terms: string[] }> = [
   {
     category: "crime",
     terms: [
@@ -48,20 +49,6 @@ const RULES: Array<{ category: Category; terms: string[] }> = [
     ],
   },
   {
-    // Equities / PSX-specific subset of business. High-precision terms only —
-    // broad words ("market", "index", "shares") are deliberately excluded so the
-    // Stocks filter stays tight. An article can be both "business" and "stocks".
-    category: "stocks",
-    terms: [
-      "psx", "kse-100", "kse100", "kse 100", "100-index", "100 index",
-      "kmi-30", "all-share index", "benchmark index", "pakistan stock exchange",
-      "stock exchange", "stock market", "stocks", "equities", "bourse",
-      "bullish", "bearish", "ipo", "listed company", "shareholders",
-      "market capitalisation", "market capitalization", "brokerage",
-      "trading session", "psx 100",
-    ],
-  },
-  {
     category: "sports",
     terms: [
       "cricket", "psl", "football", "hockey", "match", "tournament", "olympics",
@@ -78,6 +65,15 @@ const RULES: Array<{ category: Category; terms: string[] }> = [
     ],
   },
 ];
+
+// Topic categories (Stocks, FIFA, …) contribute their keywords as rules, so a
+// topic's chip filter is driven by the same config that defines the topic.
+const TOPIC_RULES: Array<{ category: Category; terms: string[] }> = TOPICS.map((t) => ({
+  category: t.slug,
+  terms: t.keywords,
+}));
+
+const RULES = [...BASE_RULES, ...TOPIC_RULES];
 
 const COMPILED = RULES.map((r) => ({
   category: r.category,

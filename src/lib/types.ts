@@ -8,6 +8,7 @@ export type Category =
   | "accident"
   | "business"
   | "stocks"
+  | "fifa"
   | "sports"
   | "health"
   | "general";
@@ -108,9 +109,9 @@ export interface Mover {
 }
 
 /**
- * PSX market snapshot. Produced off-browser by the cron (src/lib/psx.ts) and
- * embedded in snapshot.json next to `articles`/`stats`. `null` when the upstream
- * data portal is unreachable, so the UI can degrade gracefully.
+ * PSX market snapshot. Produced off-browser by the cron
+ * (src/lib/topics/stocks.ts) and embedded under `topics.stocks` in snapshot.json.
+ * `null` when the upstream data portal is unreachable, so the UI degrades.
  */
 export interface MarketSnapshot {
   /** ISO timestamp of the underlying data (last tick / close), not fetch time. */
@@ -123,4 +124,45 @@ export interface MarketSnapshot {
   gainers: Mover[];
   /** Top losers by % change among KSE-100 constituents. */
   losers: Mover[];
+}
+
+/** One side of a football fixture. */
+export interface FifaTeam {
+  name: string;
+  abbr: string;
+  logo: string | null;
+  /** Goals; null before kickoff. */
+  score: number | null;
+  winner: boolean;
+}
+
+/** A single FIFA World Cup match (fixture or result). */
+export interface FifaMatch {
+  id: string;
+  /** ISO kickoff time. */
+  date: string;
+  /** "pre" = upcoming, "in" = live, "post" = finished. */
+  state: "pre" | "in" | "post";
+  /** Short status, e.g. "FT", "55'", or a kickoff time. */
+  status: string;
+  /** Stage label, e.g. "Group Stage". */
+  round: string;
+  home: FifaTeam;
+  away: FifaTeam;
+}
+
+/**
+ * FIFA World Cup snapshot. Produced off-browser by the cron
+ * (src/lib/topics/fifa.ts) and embedded under `topics.fifa` in snapshot.json.
+ * `null` when the upstream feed is unreachable.
+ */
+export interface FifaSnapshot {
+  league: string;
+  season: number;
+  asOf: string;
+  live: FifaMatch[];
+  /** Finished matches, newest first. */
+  recent: FifaMatch[];
+  /** Scheduled matches, soonest first. */
+  upcoming: FifaMatch[];
 }

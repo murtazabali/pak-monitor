@@ -20,5 +20,8 @@ describe("classify", () => {
   it("does not tag generic business news as stocks", () => {
     expect(classify("Government raises petrol prices and taxes")).not.toContain("stocks");
   });
+  it("detects FIFA (football/World Cup)", () => {
+    expect(classify("Messi shines as Argentina win World Cup opener")).toContain("fifa");
+  });
   it("falls back to general", () => expect(classify("a quiet announcement")).toEqual(["general"]));
 });

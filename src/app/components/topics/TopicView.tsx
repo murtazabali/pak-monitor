@@ -2,29 +2,32 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import type { Article, MarketSnapshot } from "@/lib/types";
+import type { Article } from "@/lib/types";
 import { clusterArticles } from "@/lib/cluster";
 import { isLocalArticle } from "@/lib/relevance";
+import { TOPIC_BY_SLUG } from "@/config/topics";
 import FeedList from "@/app/components/FeedList";
-import MarketPanel from "@/app/components/MarketPanel";
+import TopicPanel from "@/app/components/topics/TopicPanel";
 import SiteFooter from "@/app/components/SiteFooter";
 import AdUnit from "@/app/components/AdUnit";
 import { ADSENSE_SLOTS, SNAPSHOT_URL } from "@/config/site";
 
 interface Snapshot {
   articles?: Article[];
-  market?: MarketSnapshot | null;
+  topics?: Record<string, unknown>;
 }
 
 const MAX_RENDERED = 80;
 
 /**
- * Stocks page. Reads the same static snapshot as the dashboard and shows the
- * PSX market panel plus a feed narrowed to stock/market stories — so the page
- * needs no server. Renders a loading shell until the snapshot arrives.
+ * Generic dedicated page for any topic. Reads the shared static snapshot, renders
+ * the topic's live-data panel plus a news feed scoped by the topic's config
+ * (category + alsoInclude, and the `global` scope flag for PK relevance). One
+ * component serves every topic — see src/config/topics.ts.
  */
-export default function StocksView() {
+export default function TopicView({ slug }: { slug: string }) {
   const [snap, setSnap] = useState<Snapshot | null>(null);
+  const topic = TOPIC_BY_SLUG[slug];
 
   useEffect(() => {
     fetch(SNAPSHOT_URL)
@@ -34,16 +37,20 @@ export default function StocksView() {
   }, []);
 
   const clusters = useMemo(() => {
-    // Prefer pure stock stories, but fall back to broader market/economy
-    // (business) news so the feed isn't empty when the PSX is quiet (weekends).
+    if (!topic) return [];
+    const cats = new Set<string>([topic.slug, ...(topic.alsoInclude ?? [])]);
     const stories = (snap?.articles ?? [])
       .filter(
-        (a) => (a.categories?.includes("stocks") || a.categories?.includes("business")) && isLocalArticle(a),
+        (a) =>
+          a.categories?.some((c) => cats.has(c)) &&
+          (topic.scope?.global || isLocalArticle(a)),
       )
       .sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt))
       .slice(0, MAX_RENDERED);
     return clusterArticles(stories);
-  }, [snap]);
+  }, [snap, topic]);
+
+  if (!topic) return null;
 
   if (!snap) {
     return (
@@ -51,7 +58,7 @@ export default function StocksView() {
         <Link href="/" className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-accent">
           ← Back to monitor
         </Link>
-        <p className="py-16 text-center text-sm text-muted">Loading market data…</p>
+        <p className="py-16 text-center text-sm text-muted">Loading…</p>
       </div>
     );
   }
@@ -63,28 +70,25 @@ export default function StocksView() {
       </Link>
 
       <header className="mb-6 border-b border-edge/70 pb-4">
-        <p className="font-mono text-[10px] uppercase tracking-widest text-muted">Markets</p>
-        <h1 className="font-mono text-2xl font-bold text-slate-100">📈 Pakistan Stocks</h1>
-        <p className="mt-1 text-sm text-muted">
-          Live KSE-100 benchmark, top movers and the latest market headlines from
-          the Pakistan Stock Exchange.
-        </p>
+        <p className="font-mono text-[10px] uppercase tracking-widest text-muted">{topic.label}</p>
+        <h1 className="font-mono text-2xl font-bold text-slate-100">{topic.page.heading}</h1>
+        <p className="mt-1 text-sm text-muted">{topic.page.blurb}</p>
       </header>
 
       <section className="mb-8">
-        <MarketPanel market={snap.market} />
+        <TopicPanel slug={topic.slug} data={snap.topics?.[topic.slug]} />
       </section>
 
       <section className="flex min-h-0 flex-1 flex-col">
         <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-muted">
-          📰 Stock &amp; market news
+          {topic.page.newsHeading}
         </h2>
         <FeedList
           clusters={clusters}
           isRead={() => false}
           watch={[]}
           onOpen={() => {}}
-          emptyHint="No stock or market stories in the latest snapshot yet."
+          emptyHint={topic.page.newsEmpty}
         />
       </section>
 

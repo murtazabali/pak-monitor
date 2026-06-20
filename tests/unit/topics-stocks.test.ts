@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseIndex, parseMovers } from "@/lib/psx";
+import { parseIndex, parseMovers } from "@/lib/topics/stocks";
 
 const DAY = 86_400;
 // A day-aligned "today" (matches how parseIndex buckets timestamps by day).

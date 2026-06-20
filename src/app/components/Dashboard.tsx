@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CITIES, CITY_BY_SLUG } from "@/config/cities";
-import type { Article, MarketSnapshot, Stats } from "@/lib/types";
+import { TOPICS } from "@/config/topics";
+import type { Article, Stats } from "@/lib/types";
 import { clusterArticles, type Cluster } from "@/lib/cluster";
 import { articlesToCsv, download } from "@/lib/csv";
 import { isLocalArticle } from "@/lib/relevance";
@@ -17,7 +18,7 @@ import SourceFilter from "./SourceFilter";
 import Watchlist from "./Watchlist";
 import ProvinceFilter from "./ProvinceFilter";
 import TrendingStrip from "./TrendingStrip";
-import MarketPanel from "./MarketPanel";
+import TopicPanel from "./topics/TopicPanel";
 import StatsPanel from "./StatsPanel";
 import NotificationToggle from "./NotificationToggle";
 import SpikeBanner from "./SpikeBanner";
@@ -99,7 +100,7 @@ export default function Dashboard() {
   const [mapOpen, setMapOpen] = useLocalStorage<boolean>("pak-monitor:map", true);
   const [spikes, setSpikes] = useState<Stats["spikes"]>([]);
   const [snapshotStats, setSnapshotStats] = useState<Stats | null>(null);
-  const [snapshotMarket, setSnapshotMarket] = useState<MarketSnapshot | null>(null);
+  const [snapshotTopics, setSnapshotTopics] = useState<Record<string, unknown>>({});
   const [cursor, setCursor] = useState(0);
 
   const cursorRef = useRef(0);
@@ -281,7 +282,7 @@ export default function Dashboard() {
           if (cancelled) return;
           const list: Article[] = data.articles ?? [];
           if (DATA_SOURCE === "static" && data.stats) setSnapshotStats(data.stats as Stats);
-          if (DATA_SOURCE === "static") setSnapshotMarket((data.market ?? null) as MarketSnapshot | null);
+          if (DATA_SOURCE === "static") setSnapshotTopics((data.topics ?? {}) as Record<string, unknown>);
           if (initial) {
             seenRef.current = new Set(list.map((a) => a.id));
             setArticles(list);
@@ -392,25 +393,27 @@ export default function Dashboard() {
     return Array.from(new Set(articles.map((a) => a.source))).sort((a, b) => a.localeCompare(b));
   }, [articles]);
 
-  // The Stocks chip is a "markets" view: include broader market/economy
-  // (business) stories so the feed isn't empty during a stock-news lull (e.g.
-  // weekends, when the PSX is closed).
-  const stocksView = selectedCategories.includes("stocks");
+  // A topic chip (Stocks, FIFA, …) turns the feed into that topic's view: it
+  // shows the topic panel atop the feed and scopes the feed per the topic config
+  // (alsoInclude categories, nationwide → ignore city, global → bypass PK-only).
+  const activeTopic = TOPICS.find((t) => selectedCategories.includes(t.slug)) ?? null;
 
   const displayed = useMemo(() => {
     const cats = new Set(selectedCategories);
-    if (cats.has("stocks")) cats.add("business");
+    if (activeTopic?.alsoInclude) for (const c of activeTopic.alsoInclude) cats.add(c);
     const srcs = new Set(selectedSources);
-    // Stocks/markets is a national (PSX) view — ignore the city scope so
-    // nationwide market news (which often carries no city tag) isn't dropped.
-    const citySet = selectedCities.length && !stocksView ? new Set(selectedCities) : null;
+    // Nationwide topics (PSX, FIFA) ignore the city scope so topic news that
+    // carries no city tag isn't dropped.
+    const citySet =
+      selectedCities.length && !activeTopic?.scope?.nationwide ? new Set(selectedCities) : null;
     const needle = query.trim().toLowerCase();
     const { fromMs, toMs } = windowFor(dateRange, nowTick);
     const filtered = articles.filter((a) => {
       // City filtering is server-side in API mode (no-op here) but needed for
       // the full-dataset snapshot in static mode.
       if (citySet && !a.cities.some((c) => citySet.has(c))) return false;
-      if (localOnly && !isLocalArticle(a)) return false;
+      // Global topics (e.g. FIFA) bypass the PK-only relevance filter.
+      if (localOnly && !activeTopic?.scope?.global && !isLocalArticle(a)) return false;
       if (cats.size && !a.categories.some((c) => cats.has(c))) return false;
       if (srcs.size && !srcs.has(a.source)) return false;
       if (hideRead && readSet.has(a.id)) return false;
@@ -542,13 +545,16 @@ export default function Dashboard() {
       >
         Digest
       </a>
-      <a
-        href="/stocks"
-        title="KSE-100 & stock market"
-        className="rounded-md border border-base-600 bg-base-800/50 px-2 py-1 text-xs text-slate-300 hover:bg-base-700/70"
-      >
-        📈 Stocks
-      </a>
+      {TOPICS.map((t) => (
+        <a
+          key={t.slug}
+          href={`/${t.slug}`}
+          title={t.page.blurb}
+          className="rounded-md border border-base-600 bg-base-800/50 px-2 py-1 text-xs text-slate-300 hover:bg-base-700/70"
+        >
+          {t.icon} {t.label}
+        </a>
+      ))}
       {DATA_SOURCE === "api" && (
         <a
           href={rssHref}
@@ -758,11 +764,11 @@ export default function Dashboard() {
                 </span>
               </div>
             )}
-            {stocksView && (
+            {activeTopic && (
               <div className="mb-4 animate-fade-in">
-                <MarketPanel market={snapshotMarket} />
+                <TopicPanel slug={activeTopic.slug} data={snapshotTopics[activeTopic.slug]} />
                 <p className="mt-3 font-mono text-[10px] uppercase tracking-widest text-muted">
-                  📰 Stocks &amp; market news
+                  {activeTopic.page.newsHeading}
                 </p>
               </div>
             )}

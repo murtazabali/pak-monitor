@@ -45,6 +45,33 @@ const MARKET = {
   losers: [{ symbol: "HCAR", name: "Honda Atlas Cars", price: 300, changePct: -4.56, volume: 1200000 }],
 };
 
+// A football story from a NON-Pakistani outlet with no PK mention — normally
+// dropped by "PK only", but FIFA is a global topic so it should still show.
+const FOOTBALL = makeArticle({
+  id: "fifa1",
+  title: "ZZ England beat Spain in World Cup thriller",
+  source: "Reuters",
+  cities: [],
+  categories: ["fifa", "general"],
+});
+
+const FIFA_DATA = {
+  league: "FIFA World Cup",
+  season: 2026,
+  asOf: NOW,
+  live: [],
+  recent: [
+    { id: "m1", date: NOW, state: "post", status: "FT", round: "Group Stage",
+      home: { name: "Netherlands", abbr: "NED", logo: null, score: 5, winner: true },
+      away: { name: "Sweden", abbr: "SWE", logo: null, score: 1, winner: false } },
+  ],
+  upcoming: [
+    { id: "m2", date: NOW, state: "pre", status: "", round: "Group Stage",
+      home: { name: "Ecuador", abbr: "ECU", logo: null, score: null, winner: false },
+      away: { name: "Curacao", abbr: "CUW", logo: null, score: null, winner: false } },
+  ],
+};
+
 const backlog = [ALPHA, BETA];
 
 // Stats derived from the same article list, so aggregates line up with the feed.
@@ -145,7 +172,7 @@ test.describe("Dashboard UI", () => {
   test("the Stocks chip reveals the market panel + market news in the feed", async ({ page }) => {
     await page.route("**/data/snapshot.json**", (route) =>
       route.fulfill({
-        json: { generatedAt: NOW, articles: [STOCK, BETA], market: MARKET, stats: statsFor([STOCK, BETA]) },
+        json: { generatedAt: NOW, articles: [STOCK, BETA], topics: { stocks: MARKET }, stats: statsFor([STOCK, BETA]) },
       }),
     );
     await page.goto("/");
@@ -162,6 +189,25 @@ test.describe("Dashboard UI", () => {
     await expect(page.getByText("Top gainers")).toBeVisible();
     // The feed continues with stock/market news; the sports story is filtered out.
     await expect(page.getByText(STOCK.title)).toBeVisible();
+    await expect(page.getByText(BETA.title)).toHaveCount(0);
+  });
+
+  test("the FIFA chip shows fixtures/results and global football news", async ({ page }) => {
+    await page.route("**/data/snapshot.json**", (route) =>
+      route.fulfill({
+        json: { generatedAt: NOW, articles: [FOOTBALL, BETA], topics: { fifa: FIFA_DATA }, stats: statsFor([FOOTBALL, BETA]) },
+      }),
+    );
+    await page.goto("/");
+
+    await page.getByRole("button", { name: "FIFA" }).click();
+
+    // Fixtures/results panel.
+    await expect(page.getByText("FIFA World Cup 2026")).toBeVisible();
+    await expect(page.getByText("Netherlands")).toBeVisible();
+    await expect(page.getByText("Ecuador")).toBeVisible();
+    // FIFA is global → the foreign-outlet football story shows despite "PK only".
+    await expect(page.getByText(FOOTBALL.title)).toBeVisible();
     await expect(page.getByText(BETA.title)).toHaveCount(0);
   });
 
@@ -253,7 +299,7 @@ test.describe("Stocks page", () => {
   async function mockStocks(page: Page) {
     await page.route("**/data/snapshot.json**", (route) =>
       route.fulfill({
-        json: { generatedAt: NOW, articles: [STOCK, ALPHA], market: MARKET, stats: statsFor([STOCK, ALPHA]) },
+        json: { generatedAt: NOW, articles: [STOCK, ALPHA], topics: { stocks: MARKET }, stats: statsFor([STOCK, ALPHA]) },
       }),
     );
   }
@@ -287,6 +333,36 @@ test.describe("Stocks page", () => {
     await expect(page.getByText(/Market data is temporarily unavailable/)).toBeVisible();
     // News still renders without market data.
     await expect(page.getByText(STOCK.title)).toBeVisible();
+  });
+});
+
+test.describe("FIFA page", () => {
+  test("shows fixtures, results and football news", async ({ page }) => {
+    await page.route("**/data/snapshot.json**", (route) =>
+      route.fulfill({
+        json: { generatedAt: NOW, articles: [FOOTBALL, ALPHA], topics: { fifa: FIFA_DATA }, stats: statsFor([FOOTBALL, ALPHA]) },
+      }),
+    );
+    await page.goto("/fifa");
+
+    await expect(page.getByRole("heading", { name: /FIFA World Cup 2026/ })).toBeVisible();
+    // Results + upcoming fixtures (target the section headings, not the blurb).
+    await expect(page.getByRole("heading", { name: "Recent results" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Upcoming fixtures" })).toBeVisible();
+    await expect(page.getByText("Netherlands")).toBeVisible();
+    await expect(page.getByText("Ecuador")).toBeVisible();
+    // Global topic: foreign football news shows; the unrelated crime story doesn't.
+    await expect(page.getByText(FOOTBALL.title)).toBeVisible();
+    await expect(page.getByText(ALPHA.title)).toHaveCount(0);
+  });
+
+  test("degrades gracefully when fixtures are missing", async ({ page }) => {
+    await page.route("**/data/snapshot.json**", (route) =>
+      route.fulfill({ json: { generatedAt: NOW, articles: [FOOTBALL], stats: statsFor([FOOTBALL]) } }),
+    );
+    await page.goto("/fifa");
+    await expect(page.getByText(/Fixtures & results are temporarily unavailable/)).toBeVisible();
+    await expect(page.getByText(FOOTBALL.title)).toBeVisible();
   });
 });
 

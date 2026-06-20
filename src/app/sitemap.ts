@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { CITIES } from "@/config/cities";
+import { TOPIC_SLUGS } from "@/config/topics";
 import { SITE_URL } from "@/config/site";
 
 // Generated at build time (required for output: "export").
@@ -27,7 +28,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     { url: SITE_URL, lastModified: now, changeFrequency: "hourly", priority: 1 },
     { url: `${SITE_URL}/digest`, lastModified: now, changeFrequency: "hourly", priority: 0.7 },
-    { url: `${SITE_URL}/stocks`, lastModified: now, changeFrequency: "hourly", priority: 0.7 },
+    ...TOPIC_SLUGS.map((slug) => ({
+      url: `${SITE_URL}/${slug}`,
+      lastModified: now,
+      changeFrequency: "hourly" as const,
+      priority: 0.7,
+    })),
     ...cityPages,
     ...staticPages,
   ];

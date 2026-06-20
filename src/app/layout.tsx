@@ -4,6 +4,7 @@ import Script from "next/script";
 import "./globals.css";
 import PWARegister from "./components/PWARegister";
 import { SITE_URL, SITE_NAME, SITE_TAGLINE, SITE_DESCRIPTION, ADSENSE_CLIENT } from "@/config/site";
+import { TOPICS } from "@/config/topics";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -23,10 +24,8 @@ export const metadata: Metadata = {
     "Islamabad news",
     "breaking news Pakistan",
     "Pakistan news monitor",
-    "KSE-100",
-    "PSX",
-    "Pakistan Stock Exchange",
-    "Pakistan stocks",
+    // Topic keywords (Stocks, FIFA, …) pulled from the topic registry.
+    ...TOPICS.flatMap((t) => t.page.keywords),
   ],
   alternates: { canonical: "/" },
   openGraph: {

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SITE_NAME } from "@/config/site";
+import { TOPICS } from "@/config/topics";
 
 /** Site-wide footer with the legal/info links AdSense expects to be reachable. */
 export default function SiteFooter() {
@@ -23,9 +24,11 @@ export default function SiteFooter() {
           <Link href="/digest" className="hover:text-accent">
             Digest
           </Link>
-          <Link href="/stocks" className="hover:text-accent">
-            Stocks
-          </Link>
+          {TOPICS.map((t) => (
+            <Link key={t.slug} href={`/${t.slug}`} className="hover:text-accent">
+              {t.label}
+            </Link>
+          ))}
         </nav>
       </div>
     </footer>

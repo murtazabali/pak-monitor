@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { runIngestCycle } from "@/lib/ingest";
 import { getRecent, getStats } from "@/lib/db";
-import { getMarket } from "@/lib/psx";
+import { fetchAllTopics } from "@/lib/topics";
 
 /**
  * Produce a self-contained data snapshot the static frontend can poll, so the
@@ -11,23 +11,26 @@ import { getMarket } from "@/lib/psx";
  */
 async function main() {
   const added = await runIngestCycle();
-  // PSX market data is fetched alongside the article store. It's independent of
-  // ingestion and never throws (null on failure), so it can't block the snapshot.
-  const [articles, stats, market] = await Promise.all([
+  // Topic data (Stocks/FIFA/…) is fetched alongside the article store via the
+  // topic registry. It's independent of ingestion and never throws (null on
+  // failure), so it can't block the snapshot.
+  const [articles, stats, topics] = await Promise.all([
     getRecent({ limit: 600 }),
     getStats(),
-    getMarket(),
+    fetchAllTopics(),
   ]);
 
   // No `counts` field: the client derives per-city counts from `articles` so the
   // chips always match the shipped data (a full-store count would over-count).
-  const snapshot = { generatedAt: new Date().toISOString(), articles, stats, market };
+  const snapshot = { generatedAt: new Date().toISOString(), articles, stats, topics };
   const dir = join(process.cwd(), "public", "data");
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, "snapshot.json"), JSON.stringify(snapshot));
 
-  const mkt = market ? `KSE-100 ${market.index.value.toFixed(0)} (${market.status})` : "no market data";
-  console.log(`[snapshot] wrote ${articles.length} articles (added ${added}), ${mkt} → public/data/snapshot.json`);
+  const topicSummary = Object.entries(topics)
+    .map(([k, v]) => `${k}:${v ? "ok" : "—"}`)
+    .join(" ");
+  console.log(`[snapshot] wrote ${articles.length} articles (added ${added}), topics[${topicSummary}] → public/data/snapshot.json`);
 }
 
 // Force-exit on success: feed fetches leave keep-alive sockets open, which keep

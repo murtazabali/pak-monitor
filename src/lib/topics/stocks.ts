@@ -1,10 +1,10 @@
 import type { IndexQuote, MarketSnapshot, Mover } from "@/lib/types";
 
 /**
- * Pakistan Stock Exchange market data, scraped from the public PSX data portal
- * (https://dps.psx.com.pk) — no API key. Run off-browser by the snapshot cron
- * (scripts/snapshot.ts), so there is no CORS concern and the result is embedded
- * in snapshot.json for the static frontend.
+ * Stocks topic provider — Pakistan Stock Exchange market data, scraped from the
+ * public PSX data portal (https://dps.psx.com.pk) with no API key. Run
+ * off-browser by the snapshot cron via the topic registry, so there is no CORS
+ * concern; the result is embedded under `topics.stocks` in snapshot.json.
  *
  * Nothing here throws: a flaky/blocked upstream yields `null` (or empty mover
  * lists) so the rest of the snapshot still publishes and the UI degrades.
@@ -118,7 +118,7 @@ export function parseMovers(html: string, limit = TOP_N): { gainers: Mover[]; lo
  * Fetch the full PSX market snapshot (index + movers). Returns `null` if the
  * index can't be read at all; mover lists may be empty if the table is blocked.
  */
-export async function getMarket(): Promise<MarketSnapshot | null> {
+export async function getData(): Promise<MarketSnapshot | null> {
   try {
     const [int, eod, marketWatch] = await Promise.all([
       fetchJson(`${BASE}/timeseries/int/${SYMBOL}`).catch(() => ({}) as Series),
@@ -128,7 +128,7 @@ export async function getMarket(): Promise<MarketSnapshot | null> {
 
     const index = parseIndex(int, eod);
     if (!index) {
-      console.warn("[psx] index unavailable — skipping market snapshot");
+      console.warn("[topics:stocks] index unavailable — skipping");
       return null;
     }
 
@@ -140,7 +140,7 @@ export async function getMarket(): Promise<MarketSnapshot | null> {
     const { gainers, losers } = parseMovers(marketWatch);
     return { asOf: new Date(asOfMs).toISOString(), status, index, gainers, losers };
   } catch (err) {
-    console.warn("[psx] market fetch failed:", err instanceof Error ? err.message : err);
+    console.warn("[topics:stocks] fetch failed:", err instanceof Error ? err.message : err);
     return null;
   }
 }

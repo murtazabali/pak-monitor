@@ -211,6 +211,31 @@ test.describe("Dashboard UI", () => {
     await expect(page.getByText(BETA.title)).toHaveCount(0);
   });
 
+  test("selecting Stocks + FIFA together shows both panels and both feeds", async ({ page }) => {
+    await page.route("**/data/snapshot.json**", (route) =>
+      route.fulfill({
+        json: {
+          generatedAt: NOW,
+          articles: [STOCK, FOOTBALL, BETA],
+          topics: { stocks: MARKET, fifa: FIFA_DATA },
+          stats: statsFor([STOCK, FOOTBALL, BETA]),
+        },
+      }),
+    );
+    await page.goto("/");
+
+    await page.getByRole("button", { name: "Stocks" }).click();
+    await page.getByRole("button", { name: "FIFA" }).click();
+
+    // Both panels render.
+    await expect(page.getByText("178,922.75")).toBeVisible();
+    await expect(page.getByText("FIFA World Cup 2026")).toBeVisible();
+    // Both topics' news show; the unrelated sports story doesn't.
+    await expect(page.getByText(STOCK.title)).toBeVisible();
+    await expect(page.getByText(FOOTBALL.title)).toBeVisible();
+    await expect(page.getByText(BETA.title)).toHaveCount(0);
+  });
+
   test("selecting cities updates the live scope label", async ({ page }) => {
     await mockApi(page);
     await page.goto("/");

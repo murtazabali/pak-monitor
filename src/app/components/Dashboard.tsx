@@ -393,19 +393,22 @@ export default function Dashboard() {
     return Array.from(new Set(articles.map((a) => a.source))).sort((a, b) => a.localeCompare(b));
   }, [articles]);
 
-  // A topic chip (Stocks, FIFA, …) turns the feed into that topic's view: it
-  // shows the topic panel atop the feed and scopes the feed per the topic config
-  // (alsoInclude categories, nationwide → ignore city, global → bypass PK-only).
-  const activeTopic = TOPICS.find((t) => selectedCategories.includes(t.slug)) ?? null;
+  // Topic chips (Stocks, FIFA, …) are multi-selectable like any category. Each
+  // active topic contributes its panel atop the feed and its feed scoping
+  // (alsoInclude categories; scope flags are OR-ed across the active topics:
+  // nationwide → ignore city, global → bypass PK-only).
+  const activeTopics = TOPICS.filter((t) => selectedCategories.includes(t.slug));
+  const topicNationwide = activeTopics.some((t) => t.scope?.nationwide);
+  const topicGlobal = activeTopics.some((t) => t.scope?.global);
 
   const displayed = useMemo(() => {
     const cats = new Set(selectedCategories);
-    if (activeTopic?.alsoInclude) for (const c of activeTopic.alsoInclude) cats.add(c);
+    for (const t of activeTopics) for (const c of t.alsoInclude ?? []) cats.add(c);
     const srcs = new Set(selectedSources);
     // Nationwide topics (PSX, FIFA) ignore the city scope so topic news that
     // carries no city tag isn't dropped.
     const citySet =
-      selectedCities.length && !activeTopic?.scope?.nationwide ? new Set(selectedCities) : null;
+      selectedCities.length && !topicNationwide ? new Set(selectedCities) : null;
     const needle = query.trim().toLowerCase();
     const { fromMs, toMs } = windowFor(dateRange, nowTick);
     const filtered = articles.filter((a) => {
@@ -413,7 +416,7 @@ export default function Dashboard() {
       // the full-dataset snapshot in static mode.
       if (citySet && !a.cities.some((c) => citySet.has(c))) return false;
       // Global topics (e.g. FIFA) bypass the PK-only relevance filter.
-      if (localOnly && !activeTopic?.scope?.global && !isLocalArticle(a)) return false;
+      if (localOnly && !topicGlobal && !isLocalArticle(a)) return false;
       if (cats.size && !a.categories.some((c) => cats.has(c))) return false;
       if (srcs.size && !srcs.has(a.source)) return false;
       if (hideRead && readSet.has(a.id)) return false;
@@ -764,11 +767,13 @@ export default function Dashboard() {
                 </span>
               </div>
             )}
-            {activeTopic && (
-              <div className="mb-4 animate-fade-in">
-                <TopicPanel slug={activeTopic.slug} data={snapshotTopics[activeTopic.slug]} />
-                <p className="mt-3 font-mono text-[10px] uppercase tracking-widest text-muted">
-                  {activeTopic.page.newsHeading}
+            {activeTopics.length > 0 && (
+              <div className="mb-4 animate-fade-in space-y-4">
+                {activeTopics.map((t) => (
+                  <TopicPanel key={t.slug} slug={t.slug} data={snapshotTopics[t.slug]} />
+                ))}
+                <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+                  {activeTopics.length === 1 ? activeTopics[0].page.newsHeading : "📰 Topic news"}
                 </p>
               </div>
             )}

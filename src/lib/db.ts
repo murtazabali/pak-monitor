@@ -73,14 +73,6 @@ export async function getRecent(opts: QueryOpts = {}): Promise<Article[]> {
   return [...items].sort(byNewest).slice(0, limit);
 }
 
-/** Per-city counts over the stored window — used to size the map nodes. */
-export async function cityCounts(): Promise<Record<string, number>> {
-  const items = await store.load();
-  const counts: Record<string, number> = {};
-  for (const a of items) for (const c of a.cities) counts[c] = (counts[c] ?? 0) + 1;
-  return counts;
-}
-
 /** Aggregate stats over the stored window, optionally scoped to cities + a date
  *  range (from/to ISO). The breakdowns reflect the period; the 24h sparkline is
  *  always the city's most recent activity. */

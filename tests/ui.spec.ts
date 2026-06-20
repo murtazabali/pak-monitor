@@ -92,6 +92,20 @@ test.describe("Dashboard UI", () => {
     expect(await svg.locator("circle").count()).toBeGreaterThan(5);
   });
 
+  test("city chip count is derived from the loaded articles, not the snapshot's counts", async ({ page }) => {
+    // The snapshot's `counts` cover the full server-side store and over-count
+    // vs the shipped articles[]. Make them deliberately wrong: the chip must
+    // reflect the 3 Karachi articles actually loaded, not 99.
+    const third = makeArticle({ id: "k3", title: "ZZ Third Karachi fixture headline" });
+    await page.route("**/data/snapshot.json**", (route) =>
+      route.fulfill({
+        json: { generatedAt: NOW, articles: [ALPHA, BETA, third], counts: { karachi: 99 }, stats: statsFor([ALPHA, BETA, third]) },
+      }),
+    );
+    await page.goto("/");
+    await expect(page.getByRole("button", { name: /^Karachi\s*3\b/ })).toBeVisible();
+  });
+
   test("search filters the feed", async ({ page }) => {
     await mockApi(page);
     await page.goto("/");

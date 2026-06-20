@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { runIngestCycle } from "@/lib/ingest";
-import { getRecent, cityCounts, getStats } from "@/lib/db";
+import { getRecent, getStats } from "@/lib/db";
 
 /**
  * Produce a self-contained data snapshot the static frontend can poll, so the
@@ -10,13 +10,14 @@ import { getRecent, cityCounts, getStats } from "@/lib/db";
  */
 async function main() {
   const added = await runIngestCycle();
-  const [articles, counts, stats] = await Promise.all([
+  const [articles, stats] = await Promise.all([
     getRecent({ limit: 600 }),
-    cityCounts(),
     getStats(),
   ]);
 
-  const snapshot = { generatedAt: new Date().toISOString(), articles, counts, stats };
+  // No `counts` field: the client derives per-city counts from `articles` so the
+  // chips always match the shipped data (a full-store count would over-count).
+  const snapshot = { generatedAt: new Date().toISOString(), articles, stats };
   const dir = join(process.cwd(), "public", "data");
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, "snapshot.json"), JSON.stringify(snapshot));

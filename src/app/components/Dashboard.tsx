@@ -89,7 +89,6 @@ export default function Dashboard() {
   const [buffer, setBuffer] = useState<Article[]>([]);
   const [paused, setPaused] = useState(false);
   const [status, setStatus] = useState<ConnStatus>("connecting");
-  const [counts, setCounts] = useState<Record<string, number>>({});
   const [pulsing, setPulsing] = useState<Set<string>>(() => new Set());
   const [nowTick, setNowTick] = useState(() => Date.now());
   const [statsOpen, setStatsOpen] = useState(false);
@@ -250,11 +249,6 @@ export default function Dashboard() {
       if (seenRef.current.has(a.id)) return;
       seenRef.current.add(a.id);
 
-      setCounts((prev) => {
-        const next = { ...prev };
-        for (const c of a.cities) next[c] = (next[c] ?? 0) + 1;
-        return next;
-      });
       triggerPulse(a.cities.filter((c) => selectedCities.length === 0 || selectedCities.includes(c)));
 
       if (notifyRef.current) {
@@ -283,7 +277,6 @@ export default function Dashboard() {
         .then((data) => {
           if (cancelled) return;
           const list: Article[] = data.articles ?? [];
-          setCounts(data.counts ?? {});
           if (DATA_SOURCE === "static" && data.stats) setSnapshotStats(data.stats as Stats);
           if (initial) {
             seenRef.current = new Set(list.map((a) => a.id));
@@ -479,6 +472,24 @@ export default function Dashboard() {
             : "All time";
   const statsWindow = windowFor(dateRange, nowTick);
 
+  // City chip / map counts, derived from the loaded articles under the same
+  // ambient filters as the feed (PK-only + date) so a chip's number matches the
+  // feed when that city is selected. The snapshot's own `counts` covered the full
+  // server-side store — including older articles not shipped in the 600-item
+  // snapshot — which made the chips over-count.
+  const cityChipCounts = useMemo(() => {
+    const { fromMs, toMs } = windowFor(dateRange, nowTick);
+    const out: Record<string, number> = {};
+    for (const a of articles) {
+      if (localOnly && !isLocalArticle(a)) continue;
+      const t = Date.parse(a.publishedAt);
+      if (fromMs !== null && t < fromMs) continue;
+      if (toMs !== null && t > toMs) continue;
+      for (const c of a.cities) out[c] = (out[c] ?? 0) + 1;
+    }
+    return out;
+  }, [articles, localOnly, dateRange, nowTick]);
+
   // Static mode has no /api/stats: compute the drawer's stats client-side from
   // the in-memory snapshot, scoped to the selected cities + period, so the
   // numbers match the visible feed instead of the global snapshot totals. Only
@@ -589,7 +600,7 @@ export default function Dashboard() {
           <CityChips
             cities={CITIES}
             selected={selectedCities}
-            counts={counts}
+            counts={cityChipCounts}
             onToggle={toggleCity}
             onSelectAll={() => setSelectedCities([])}
           />
@@ -628,7 +639,7 @@ export default function Dashboard() {
             <PakistanMap
               cities={CITIES}
               selected={selectedCities}
-              counts={counts}
+              counts={cityChipCounts}
               pulsing={pulsing}
               onToggle={toggleCity}
             />

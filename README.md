@@ -4,7 +4,7 @@
 
 ### Realtime news monitor for Pakistan — a glowing map + live feed of everything happening across the country's cities.
 
-[![Live](https://img.shields.io/badge/▶_live-pak--monitor.netlify.app-22d3ee?style=for-the-badge)](https://pak-monitor.netlify.app)
+[![Live](https://img.shields.io/badge/▶_live-pak--monitor.pages.dev-f38020?style=for-the-badge)](https://pak-monitor.pages.dev)
 &nbsp;
 [![CI](https://img.shields.io/github/actions/workflow/status/murtazabali/pak-monitor/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/murtazabali/pak-monitor/actions/workflows/ci.yml)
 &nbsp;
@@ -12,7 +12,7 @@
 
 <br/>
 
-<a href="https://pak-monitor.netlify.app">
+<a href="https://pak-monitor.pages.dev">
   <img src="docs/dashboard.png" width="880" alt="Pak Monitor dashboard — live map of Pakistan with a realtime news feed" />
 </a>
 
@@ -24,9 +24,9 @@ Pick one or more cities and watch everything happening there stream in — on a 
 
 <table>
   <tr>
-    <td width="33%"><a href="https://pak-monitor.netlify.app"><img src="docs/stats.png" alt="Statistics drawer" /></a></td>
-    <td width="33%"><a href="https://pak-monitor.netlify.app/city/karachi"><img src="docs/city.png" alt="Karachi city page" /></a></td>
-    <td width="33%"><a href="https://pak-monitor.netlify.app/digest"><img src="docs/digest.png" alt="24-hour digest" /></a></td>
+    <td width="33%"><a href="https://pak-monitor.pages.dev"><img src="docs/stats.png" alt="Statistics drawer" /></a></td>
+    <td width="33%"><a href="https://pak-monitor.pages.dev/city/karachi"><img src="docs/city.png" alt="Karachi city page" /></a></td>
+    <td width="33%"><a href="https://pak-monitor.pages.dev/digest"><img src="docs/digest.png" alt="24-hour digest" /></a></td>
   </tr>
   <tr align="center">
     <td>📊 Scoped statistics drawer</td>
@@ -44,7 +44,7 @@ Pick one or more cities and watch everything happening there stream in — on a 
 - **🎛️ Rich filters** — category tags (politics/crime/weather/accident/business/sports/health), source filter, date range (rolling 24h/7d/30d or custom), and instant search.
 - **⭐ Watchlist + alerts** — track keywords (highlighted in the feed) and opt into browser notifications + a sound ping for breaking news.
 - **📊 Stats drawer** — per-hour sparkline, top cities/categories/sources, a keyword cloud and "most mentioned" entities — all **scoped to your current selection**.
-- **🧾 Outputs** — a 24-hour **[digest](https://pak-monitor.netlify.app/digest)**, per-city pages (`/city/karachi`), **CSV export**, **saved views**, and **shareable URLs** (every filter lives in the query string).
+- **🧾 Outputs** — a 24-hour **[digest](https://pak-monitor.pages.dev/digest)**, per-city pages (`/city/karachi`), **CSV export**, **saved views**, and **shareable URLs** (every filter lives in the query string).
 - **🔬 Signal extras** — activity-spike alerts, sentiment tone, entity extraction, and a PK-only relevance filter to cut foreign noise.
 - **⌨️ Keyboard nav** (`j`/`k`/`o`/`/`) · **📱 installable PWA** · **🌑 dark "intel command-center" aesthetic.**
 
@@ -63,11 +63,11 @@ A browser can't fetch news RSS directly (CORS), so the feeds are pulled **off-br
         raw.githubusercontent.com/…/data/snapshot.json   ← GitHub CDN, CORS-enabled
                                                    │
                                                    ▼
-        Static site on Netlify  ──reads──▶  snapshot.json
+        Static site on Cloudflare Pages  ──reads──▶  snapshot.json
         dashboard · city pages · digest  (all rendered in the browser)
 ```
 
-Because data refreshes live on a separate `data` branch (force-pushed as one commit), **Netlify only ever rebuilds when the code changes** — data updates cost nothing and never bloat git history.
+Because data refreshes live on a separate `data` branch (force-pushed as one commit), **the host only ever rebuilds when the code changes** — data updates cost nothing and never bloat git history.
 
 ## 🧱 Tech stack
 
@@ -78,7 +78,7 @@ Because data refreshes live on a separate `data` branch (force-pushed as one com
 | Data | Prebuilt JSON snapshot, refreshed by **GitHub Actions**, served from GitHub's CDN |
 | Ingestion | `rss-parser` (runs in CI, never at request time) |
 | Map | `d3-geo` + a bundled Pakistan GeoJSON (renders fully offline) |
-| Hosting | Netlify — static, **zero serverless functions** |
+| Hosting | Cloudflare Pages — static, **zero serverless functions** |
 | Tests | Vitest (unit) + Playwright (E2E) |
 
 ## 🚀 Run it locally

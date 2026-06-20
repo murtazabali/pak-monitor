@@ -1,18 +1,21 @@
 // Single source of truth for the canonical site URL + branding, reused by
 // metadata, sitemap, robots and structured data.
 
-export const SITE_URL = "https://pak-monitor.netlify.app";
+export const SITE_URL = "https://pak-monitor.pages.dev";
 export const SITE_NAME = "Pak Monitor";
 export const SITE_TAGLINE = "Realtime Pakistan City News";
 export const SITE_DESCRIPTION =
   "Live news monitor for Pakistani cities. Pick cities and watch everything happening there — crime, politics, weather and business — stream in, in real time, aggregated from Pakistan's top outlets.";
 
-// Where the dashboard / city / digest pages read their data from. A prebuilt
-// snapshot, served from the local /public copy in dev and from GitHub's CDN in
-// production (so data refreshes never trigger a Netlify rebuild). Override with
-// NEXT_PUBLIC_SNAPSHOT_URL at build time.
+// Where the dashboard / city / digest pages read their data from. In dev, the
+// local /public seed; in any production build, GitHub's CDN (the `data` branch
+// the cron force-pushes) — so the host needs no env config and data refreshes
+// never trigger a rebuild. NEXT_PUBLIC_SNAPSHOT_URL overrides either.
 export const SNAPSHOT_URL =
-  process.env.NEXT_PUBLIC_SNAPSHOT_URL || "/data/snapshot.json";
+  process.env.NEXT_PUBLIC_SNAPSHOT_URL ||
+  (process.env.NODE_ENV === "production"
+    ? "https://raw.githubusercontent.com/murtazabali/pak-monitor/data/snapshot.json"
+    : "/data/snapshot.json");
 
 // Public contact address shown on the Contact page (required for AdSense).
 export const CONTACT_EMAIL = "murtaza_fakhruddin@outlook.com";

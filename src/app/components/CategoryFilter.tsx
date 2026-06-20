@@ -28,7 +28,11 @@ export default function CategoryFilter({ selected, onToggle }: Props) {
                 : undefined
             }
           >
-            <span className="h-2 w-2 rounded-full" style={{ background: c.color }} />
+            {c.icon ? (
+              <span aria-hidden className="text-[11px] leading-none">{c.icon}</span>
+            ) : (
+              <span className="h-2 w-2 rounded-full" style={{ background: c.color }} />
+            )}
             {c.label}
           </button>
         );

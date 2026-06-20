@@ -23,6 +23,10 @@ export const metadata: Metadata = {
     "Islamabad news",
     "breaking news Pakistan",
     "Pakistan news monitor",
+    "KSE-100",
+    "PSX",
+    "Pakistan Stock Exchange",
+    "Pakistan stocks",
   ],
   alternates: { canonical: "/" },
   openGraph: {

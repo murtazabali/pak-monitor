@@ -27,6 +27,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     { url: SITE_URL, lastModified: now, changeFrequency: "hourly", priority: 1 },
     { url: `${SITE_URL}/digest`, lastModified: now, changeFrequency: "hourly", priority: 0.7 },
+    { url: `${SITE_URL}/stocks`, lastModified: now, changeFrequency: "hourly", priority: 0.7 },
     ...cityPages,
     ...staticPages,
   ];

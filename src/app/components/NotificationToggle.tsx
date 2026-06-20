@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { ensureNotificationPermission, notificationsSupported } from "./alerts";
 
 export default function NotificationToggle({
@@ -9,7 +10,13 @@ export default function NotificationToggle({
   enabled: boolean;
   onChange: (b: boolean) => void;
 }) {
-  if (!notificationsSupported()) return null;
+  // `notificationsSupported()` is false during SSR (no `window`) but true in the
+  // browser, so checking it during render mismatches the server HTML on hydration.
+  // Resolve it after mount instead: the first client render matches the server
+  // (both render nothing), then the button appears once support is confirmed.
+  const [supported, setSupported] = useState(false);
+  useEffect(() => setSupported(notificationsSupported()), []);
+  if (!supported) return null;
 
   return (
     <button

@@ -31,6 +31,20 @@ const OLD = makeArticle({
   categories: ["politics"],
 });
 
+const STOCK = makeArticle({
+  id: "stock1",
+  title: "ZZ KSE-100 hits record high as PSX rallies",
+  categories: ["stocks", "business"],
+});
+
+const MARKET = {
+  asOf: NOW,
+  status: "closed" as const,
+  index: { symbol: "KSE100", label: "KSE-100", value: 178922.75, change: -2475.46, changePct: -1.36 },
+  gainers: [{ symbol: "SSGC", name: "Sui Southern Gas Company", price: 31.32, changePct: 2.25, volume: 87347852 }],
+  losers: [{ symbol: "HCAR", name: "Honda Atlas Cars", price: 300, changePct: -4.56, volume: 1200000 }],
+};
+
 const backlog = [ALPHA, BETA];
 
 // Stats derived from the same article list, so aggregates line up with the feed.
@@ -124,6 +138,26 @@ test.describe("Dashboard UI", () => {
     // Filter to Crime → the sports article disappears.
     await page.getByRole("button", { name: "Crime" }).click();
     await expect(page.getByText(ALPHA.title)).toBeVisible();
+    await expect(page.getByText(BETA.title)).toHaveCount(0);
+  });
+
+  test("the Stocks chip reveals the market panel + market news in the feed", async ({ page }) => {
+    await page.route("**/data/snapshot.json**", (route) =>
+      route.fulfill({
+        json: { generatedAt: NOW, articles: [STOCK, BETA], market: MARKET, stats: statsFor([STOCK, BETA]) },
+      }),
+    );
+    await page.goto("/");
+
+    // The market panel only appears once the Stocks filter is active.
+    await expect(page.getByText("178,922.75")).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Stocks" }).click();
+
+    await expect(page.getByText("178,922.75")).toBeVisible();
+    await expect(page.getByText("Top gainers")).toBeVisible();
+    // The feed continues with stock/market news; the sports story is filtered out.
+    await expect(page.getByText(STOCK.title)).toBeVisible();
     await expect(page.getByText(BETA.title)).toHaveCount(0);
   });
 
@@ -224,6 +258,47 @@ test.describe("Dashboard UI", () => {
     await mockApi(page);
     await page.goto("/");
     await expect(page.getByRole("button", { name: /CSV/ })).toBeVisible();
+  });
+});
+
+test.describe("Stocks page", () => {
+  async function mockStocks(page: Page) {
+    await page.route("**/data/snapshot.json**", (route) =>
+      route.fulfill({
+        json: { generatedAt: NOW, articles: [STOCK, ALPHA], market: MARKET, stats: statsFor([STOCK, ALPHA]) },
+      }),
+    );
+  }
+
+  test("shows the KSE-100 index, movers and stock-only news", async ({ page }) => {
+    await mockStocks(page);
+    await page.goto("/stocks");
+
+    await expect(page.getByRole("heading", { name: /Pakistan Stocks/ })).toBeVisible();
+
+    // Index hero: level, signed % change and the closed-market badge.
+    await expect(page.getByText("178,922.75")).toBeVisible();
+    await expect(page.getByText(/-1\.36%/)).toBeVisible();
+    await expect(page.getByText("Market closed")).toBeVisible();
+
+    // Movers tables.
+    await expect(page.getByText("Top gainers")).toBeVisible();
+    await expect(page.getByText("SSGC")).toBeVisible();
+    await expect(page.getByText("HCAR")).toBeVisible();
+
+    // The feed is narrowed to stock stories: the stock article shows, the crime one doesn't.
+    await expect(page.getByText(STOCK.title)).toBeVisible();
+    await expect(page.getByText(ALPHA.title)).toHaveCount(0);
+  });
+
+  test("degrades gracefully when market data is missing", async ({ page }) => {
+    await page.route("**/data/snapshot.json**", (route) =>
+      route.fulfill({ json: { generatedAt: NOW, articles: [STOCK], stats: statsFor([STOCK]) } }),
+    );
+    await page.goto("/stocks");
+    await expect(page.getByText(/Market data is temporarily unavailable/)).toBeVisible();
+    // News still renders without market data.
+    await expect(page.getByText(STOCK.title)).toBeVisible();
   });
 });
 

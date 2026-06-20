@@ -7,6 +7,7 @@ export type Category =
   | "weather"
   | "accident"
   | "business"
+  | "stocks"
   | "sports"
   | "health"
   | "general";
@@ -77,4 +78,49 @@ export interface Article {
   cities: string[];
   /** Matched category tags. */
   categories: Category[];
+}
+
+/** A market index quote (e.g. the KSE-100 benchmark). */
+export interface IndexQuote {
+  /** Index symbol, e.g. "KSE100". */
+  symbol: string;
+  /** Display label, e.g. "KSE-100". */
+  label: string;
+  /** Latest level (live during trading hours, otherwise last close). */
+  value: number;
+  /** Point change vs the previous session's close. */
+  change: number;
+  /** Percentage change vs the previous session's close. */
+  changePct: number;
+}
+
+/** A single stock's session move, used for gainers/losers tables. */
+export interface Mover {
+  symbol: string;
+  /** Company name, when available from the source. */
+  name: string;
+  /** Latest traded price. */
+  price: number;
+  /** Percentage change vs the previous close (signed). */
+  changePct: number;
+  /** Shares traded this session. */
+  volume: number;
+}
+
+/**
+ * PSX market snapshot. Produced off-browser by the cron (src/lib/psx.ts) and
+ * embedded in snapshot.json next to `articles`/`stats`. `null` when the upstream
+ * data portal is unreachable, so the UI can degrade gracefully.
+ */
+export interface MarketSnapshot {
+  /** ISO timestamp of the underlying data (last tick / close), not fetch time. */
+  asOf: string;
+  /** Whether the exchange appears to be in a live session. */
+  status: "open" | "closed";
+  /** Benchmark index (KSE-100). */
+  index: IndexQuote;
+  /** Top gainers by % change among KSE-100 constituents. */
+  gainers: Mover[];
+  /** Top losers by % change among KSE-100 constituents. */
+  losers: Mover[];
 }

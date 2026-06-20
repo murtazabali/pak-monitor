@@ -13,5 +13,12 @@ describe("classify", () => {
   it("detects crime", () => expect(classify("Two killed in firing")).toContain("crime"));
   it("detects weather", () => expect(classify("Heavy monsoon flooding")).toContain("weather"));
   it("detects business", () => expect(classify("Stocks rise as rupee gains")).toContain("business"));
+  it("detects stocks (PSX/equities)", () => {
+    const cats = classify("KSE-100 surges as PSX hits record high");
+    expect(cats).toContain("stocks");
+  });
+  it("does not tag generic business news as stocks", () => {
+    expect(classify("Government raises petrol prices and taxes")).not.toContain("stocks");
+  });
   it("falls back to general", () => expect(classify("a quiet announcement")).toEqual(["general"]));
 });

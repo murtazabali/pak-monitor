@@ -48,6 +48,20 @@ const RULES: Array<{ category: Category; terms: string[] }> = [
     ],
   },
   {
+    // Equities / PSX-specific subset of business. High-precision terms only —
+    // broad words ("market", "index", "shares") are deliberately excluded so the
+    // Stocks filter stays tight. An article can be both "business" and "stocks".
+    category: "stocks",
+    terms: [
+      "psx", "kse-100", "kse100", "kse 100", "100-index", "100 index",
+      "kmi-30", "all-share index", "benchmark index", "pakistan stock exchange",
+      "stock exchange", "stock market", "stocks", "equities", "bourse",
+      "bullish", "bearish", "ipo", "listed company", "shareholders",
+      "market capitalisation", "market capitalization", "brokerage",
+      "trading session", "psx 100",
+    ],
+  },
+  {
     category: "sports",
     terms: [
       "cricket", "psl", "football", "hockey", "match", "tournament", "olympics",

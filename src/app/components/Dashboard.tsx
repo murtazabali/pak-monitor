@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CITIES, DEFAULT_CITY, CITY_BY_SLUG } from "@/config/cities";
-import type { Article, Stats } from "@/lib/types";
+import type { Article, MarketSnapshot, Stats } from "@/lib/types";
 import { clusterArticles, type Cluster } from "@/lib/cluster";
 import { articlesToCsv, download } from "@/lib/csv";
 import { isLocalArticle } from "@/lib/relevance";
@@ -17,6 +17,7 @@ import SourceFilter from "./SourceFilter";
 import Watchlist from "./Watchlist";
 import ProvinceFilter from "./ProvinceFilter";
 import TrendingStrip from "./TrendingStrip";
+import MarketPanel from "./MarketPanel";
 import StatsPanel from "./StatsPanel";
 import NotificationToggle from "./NotificationToggle";
 import SpikeBanner from "./SpikeBanner";
@@ -97,6 +98,7 @@ export default function Dashboard() {
   const [mapOpen, setMapOpen] = useLocalStorage<boolean>("pak-monitor:map", true);
   const [spikes, setSpikes] = useState<Stats["spikes"]>([]);
   const [snapshotStats, setSnapshotStats] = useState<Stats | null>(null);
+  const [snapshotMarket, setSnapshotMarket] = useState<MarketSnapshot | null>(null);
   const [cursor, setCursor] = useState(0);
 
   const cursorRef = useRef(0);
@@ -278,6 +280,7 @@ export default function Dashboard() {
           if (cancelled) return;
           const list: Article[] = data.articles ?? [];
           if (DATA_SOURCE === "static" && data.stats) setSnapshotStats(data.stats as Stats);
+          if (DATA_SOURCE === "static") setSnapshotMarket((data.market ?? null) as MarketSnapshot | null);
           if (initial) {
             seenRef.current = new Set(list.map((a) => a.id));
             setArticles(list);
@@ -388,8 +391,14 @@ export default function Dashboard() {
     return Array.from(new Set(articles.map((a) => a.source))).sort((a, b) => a.localeCompare(b));
   }, [articles]);
 
+  // The Stocks chip is a "markets" view: include broader market/economy
+  // (business) stories so the feed isn't empty during a stock-news lull (e.g.
+  // weekends, when the PSX is closed).
+  const stocksView = selectedCategories.includes("stocks");
+
   const displayed = useMemo(() => {
     const cats = new Set(selectedCategories);
+    if (cats.has("stocks")) cats.add("business");
     const srcs = new Set(selectedSources);
     const citySet = selectedCities.length ? new Set(selectedCities) : null;
     const needle = query.trim().toLowerCase();
@@ -529,6 +538,13 @@ export default function Dashboard() {
         className="rounded-md border border-base-600 bg-base-800/50 px-2 py-1 text-xs text-slate-300 hover:bg-base-700/70"
       >
         Digest
+      </a>
+      <a
+        href="/stocks"
+        title="KSE-100 & stock market"
+        className="rounded-md border border-base-600 bg-base-800/50 px-2 py-1 text-xs text-slate-300 hover:bg-base-700/70"
+      >
+        📈 Stocks
       </a>
       {DATA_SOURCE === "api" && (
         <a
@@ -730,6 +746,14 @@ export default function Dashboard() {
                   <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-accent/30 border-t-accent" />
                   Updating feed…
                 </span>
+              </div>
+            )}
+            {stocksView && (
+              <div className="mb-4 animate-fade-in">
+                <MarketPanel market={snapshotMarket} />
+                <p className="mt-3 font-mono text-[10px] uppercase tracking-widest text-muted">
+                  📰 Stocks &amp; market news
+                </p>
               </div>
             )}
             <FeedList

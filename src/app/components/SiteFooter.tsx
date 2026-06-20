@@ -4,7 +4,7 @@ import { SITE_NAME } from "@/config/site";
 /** Site-wide footer with the legal/info links AdSense expects to be reachable. */
 export default function SiteFooter() {
   return (
-    <footer className="border-t border-edge/60 px-1 py-3 text-[11px] text-muted">
+    <footer className="border-t border-edge/60 px-4 py-3 text-[11px] text-muted">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p>
           {SITE_NAME} · Headlines aggregated from public RSS feeds; all rights
@@ -22,6 +22,9 @@ export default function SiteFooter() {
           </Link>
           <Link href="/digest" className="hover:text-accent">
             Digest
+          </Link>
+          <Link href="/stocks" className="hover:text-accent">
+            Stocks
           </Link>
         </nav>
       </div>

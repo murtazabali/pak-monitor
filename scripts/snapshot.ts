@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { runIngestCycle } from "@/lib/ingest";
 import { getRecent, getStats } from "@/lib/db";
+import { getMarket } from "@/lib/psx";
 
 /**
  * Produce a self-contained data snapshot the static frontend can poll, so the
@@ -10,19 +11,23 @@ import { getRecent, getStats } from "@/lib/db";
  */
 async function main() {
   const added = await runIngestCycle();
-  const [articles, stats] = await Promise.all([
+  // PSX market data is fetched alongside the article store. It's independent of
+  // ingestion and never throws (null on failure), so it can't block the snapshot.
+  const [articles, stats, market] = await Promise.all([
     getRecent({ limit: 600 }),
     getStats(),
+    getMarket(),
   ]);
 
   // No `counts` field: the client derives per-city counts from `articles` so the
   // chips always match the shipped data (a full-store count would over-count).
-  const snapshot = { generatedAt: new Date().toISOString(), articles, stats };
+  const snapshot = { generatedAt: new Date().toISOString(), articles, stats, market };
   const dir = join(process.cwd(), "public", "data");
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, "snapshot.json"), JSON.stringify(snapshot));
 
-  console.log(`[snapshot] wrote ${articles.length} articles (added ${added}) → public/data/snapshot.json`);
+  const mkt = market ? `KSE-100 ${market.index.value.toFixed(0)} (${market.status})` : "no market data";
+  console.log(`[snapshot] wrote ${articles.length} articles (added ${added}), ${mkt} → public/data/snapshot.json`);
 }
 
 // Force-exit on success: feed fetches leave keep-alive sockets open, which keep

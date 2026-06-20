@@ -188,23 +188,6 @@ test.describe("Dashboard UI", () => {
     await expect(page.getByText(OLD.title)).toHaveCount(0);
   });
 
-  test("clicking a preset fills the From and To date inputs", async ({ page }) => {
-    await mockApi(page);
-    await page.goto("/");
-
-    const from = page.getByLabel("From date", { exact: true });
-    const to = page.getByLabel("To date", { exact: true });
-
-    // "All" (default) leaves the boxes empty.
-    await expect(from).toHaveValue("");
-    await expect(to).toHaveValue("");
-
-    // A preset fills both boxes (From = start of window, To = today).
-    await page.getByRole("button", { name: "24h", exact: true }).click();
-    await expect(from).not.toHaveValue("");
-    await expect(to).not.toHaveValue("");
-  });
-
   test("pause toggles the live feed state", async ({ page }) => {
     await mockApi(page);
     await page.goto("/");

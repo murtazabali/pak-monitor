@@ -699,7 +699,7 @@ export default function Dashboard() {
                 aria-label="Search headlines"
                 className="rounded-md border border-base-600 bg-base-850/80 px-3 py-1.5 text-sm text-slate-200 placeholder:text-muted focus:border-accent/60 focus:outline-none sm:hidden"
               />
-              <DateRangeFilter value={dateRange} now={nowTick} onChange={setDateRange} />
+              <DateRangeFilter value={dateRange} onChange={setDateRange} />
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <CategoryFilter selected={selectedCategories} onToggle={toggleCategory} />
                 <SourceFilter

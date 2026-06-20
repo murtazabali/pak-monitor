@@ -211,7 +211,21 @@ test.describe("Dashboard UI", () => {
     await expect(page.getByText(BETA.title)).toHaveCount(0);
   });
 
-  test("selecting Stocks + FIFA together shows both panels and both feeds", async ({ page }) => {
+  test("categories are single-select (one at a time)", async ({ page }) => {
+    await mockApi(page); // ALPHA = crime, BETA = sports
+    await page.goto("/");
+
+    await page.getByRole("button", { name: "Crime" }).click();
+    await expect(page.getByText(ALPHA.title)).toBeVisible();
+    await expect(page.getByText(BETA.title)).toHaveCount(0);
+
+    // Picking another category replaces the first.
+    await page.getByRole("button", { name: "Sports" }).click();
+    await expect(page.getByText(BETA.title)).toBeVisible();
+    await expect(page.getByText(ALPHA.title)).toHaveCount(0);
+  });
+
+  test("a shared URL with two topics still shows both panels (multi-topic safety net)", async ({ page }) => {
     await page.route("**/data/snapshot.json**", (route) =>
       route.fulfill({
         json: {
@@ -222,15 +236,11 @@ test.describe("Dashboard UI", () => {
         },
       }),
     );
-    await page.goto("/");
+    // Clicking is single-select, but a shared link can carry both.
+    await page.goto("/?cat=stocks,fifa");
 
-    await page.getByRole("button", { name: "Stocks" }).click();
-    await page.getByRole("button", { name: "FIFA" }).click();
-
-    // Both panels render.
     await expect(page.getByText("178,922.75")).toBeVisible();
     await expect(page.getByText("FIFA World Cup 2026")).toBeVisible();
-    // Both topics' news show; the unrelated sports story doesn't.
     await expect(page.getByText(STOCK.title)).toBeVisible();
     await expect(page.getByText(FOOTBALL.title)).toBeVisible();
     await expect(page.getByText(BETA.title)).toHaveCount(0);

@@ -377,8 +377,11 @@ export default function Dashboard() {
   const toggleCity = useCallback((slug: string) => {
     setSelectedCities((prev) => (prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]));
   }, []);
+  // Single-select: picking a category replaces the current one (click it again
+  // to clear and show everything). Multiple categories can still arrive via a
+  // shared URL / saved view, which the feed + topic panels handle fine.
   const toggleCategory = useCallback((slug: string) => {
-    setSelectedCategories((prev) => (prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]));
+    setSelectedCategories((prev) => (prev.includes(slug) ? [] : [slug]));
   }, []);
   const toggleSource = useCallback((s: string) => {
     setSelectedSources((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));

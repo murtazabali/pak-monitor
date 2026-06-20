@@ -52,12 +52,12 @@ function windowFor(dr: DateRange, now: number): { fromMs: number | null; toMs: n
 
 function presetToRange(preset: string): DateRange {
   switch (preset) {
+    case "6h":
+      return { preset: "6h", durationMs: DAY / 4, fromMs: null, toMs: null };
     case "24h":
       return { preset: "24h", durationMs: DAY, fromMs: null, toMs: null };
-    case "7d":
-      return { preset: "7d", durationMs: 7 * DAY, fromMs: null, toMs: null };
-    case "30d":
-      return { preset: "30d", durationMs: 30 * DAY, fromMs: null, toMs: null };
+    case "3d":
+      return { preset: "3d", durationMs: 3 * DAY, fromMs: null, toMs: null };
     default:
       return DEFAULT_RANGE;
   }
@@ -145,7 +145,7 @@ export default function Dashboard() {
     if (selectedCategories.length) sp.set("cat", selectedCategories.join(","));
     if (selectedSources.length) sp.set("src", selectedSources.join(","));
     if (query.trim()) sp.set("q", query.trim());
-    if (["24h", "7d", "30d"].includes(dateRange.preset)) sp.set("d", dateRange.preset);
+    if (["6h", "24h", "3d"].includes(dateRange.preset)) sp.set("d", dateRange.preset);
     return sp.toString();
   }, [selectedCities, selectedCategories, selectedSources, query, dateRange]);
 
@@ -473,12 +473,12 @@ export default function Dashboard() {
       : selectedCities.map((s) => CITY_BY_SLUG[s]?.name ?? s).join(", ");
 
   const periodLabel =
-    dateRange.preset === "24h"
-      ? "Last 24h"
-      : dateRange.preset === "7d"
-        ? "Last 7 days"
-        : dateRange.preset === "30d"
-          ? "Last 30 days"
+    dateRange.preset === "6h"
+      ? "Last 6h"
+      : dateRange.preset === "24h"
+        ? "Last 24h"
+        : dateRange.preset === "3d"
+          ? "Last 3 days"
           : dateRange.preset === "custom"
             ? "Custom range"
             : "All time";

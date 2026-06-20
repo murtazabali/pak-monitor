@@ -1,7 +1,7 @@
 "use client";
 
 export interface DateRange {
-  /** Active preset: "all" | "24h" | "7d" | "30d" | "custom". */
+  /** Active preset: "all" | "6h" | "24h" | "3d" | "custom". */
   preset: string;
   /** Window length for rolling presets (ms). Null for "all"/"custom". */
   durationMs: number | null;
@@ -17,11 +17,15 @@ const DAY = 24 * HOUR;
 
 // Rolling presets are stored as a DURATION, not a fixed timestamp, so the window
 // keeps advancing as the clock ticks (the dashboard passes a live `now`).
+// Windows are sized to the data that actually exists: the snapshot ships the
+// ~600 most-recent articles, which span only a few days (RSS feeds don't carry
+// older items, and the store isn't persisted between cron runs). 7d/30d would
+// always equal "All", so the presets stay within the real ~3-day window.
 const PRESETS: Array<{ key: string; label: string; make: () => DateRange }> = [
-  { key: "all", label: "All", make: () => ({ preset: "all", durationMs: null, fromMs: null, toMs: null }) },
+  { key: "6h", label: "6h", make: () => ({ preset: "6h", durationMs: 6 * HOUR, fromMs: null, toMs: null }) },
   { key: "24h", label: "24h", make: () => ({ preset: "24h", durationMs: DAY, fromMs: null, toMs: null }) },
-  { key: "7d", label: "7 days", make: () => ({ preset: "7d", durationMs: 7 * DAY, fromMs: null, toMs: null }) },
-  { key: "30d", label: "30 days", make: () => ({ preset: "30d", durationMs: 30 * DAY, fromMs: null, toMs: null }) },
+  { key: "3d", label: "3 days", make: () => ({ preset: "3d", durationMs: 3 * DAY, fromMs: null, toMs: null }) },
+  { key: "all", label: "All", make: () => ({ preset: "all", durationMs: null, fromMs: null, toMs: null }) },
 ];
 
 function pad(n: number): string {

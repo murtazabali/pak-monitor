@@ -1,22 +1,15 @@
 import type { ArticleStore } from "./types";
 import { createLowdbStore } from "./lowdb";
-import { createBlobsStore } from "./blobs";
 
 export type { ArticleStore } from "./types";
 
 let instance: ArticleStore | null = null;
 
 /**
- * The active storage adapter, chosen by env:
- *   STORAGE=lowdb | blobs   (defaults to blobs on Netlify, else lowdb)
+ * The article store, backed by lowdb (a JSON file). Only the snapshot script
+ * (run in CI) touches it; the deployed site is a static export with no store.
  */
 export function getArticleStore(): ArticleStore {
-  if (!instance) {
-    // Explicit STORAGE wins; otherwise auto-pick Blobs when a Netlify runtime is
-    // detected (NETLIFY_BLOBS_CONTEXT is injected into Netlify functions).
-    const onNetlify = !!(process.env.NETLIFY || process.env.NETLIFY_BLOBS_CONTEXT);
-    const kind = process.env.STORAGE ?? (onNetlify ? "blobs" : "lowdb");
-    instance = kind === "blobs" ? createBlobsStore() : createLowdbStore();
-  }
+  if (!instance) instance = createLowdbStore();
   return instance;
 }

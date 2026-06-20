@@ -9,8 +9,8 @@ interface Data {
   articles: Article[];
 }
 
-// On Lambda the working dir is read-only; only /tmp is writable. (lowdb is still
-// ephemeral/per-container there — use STORAGE=blobs for real serverless storage.)
+// Writes a JSON file under ./data (or $DATA_DIR). The snapshot script runs this
+// fresh in CI each cycle, so the file is transient by design.
 const DATA_DIR =
   process.env.DATA_DIR ?? (process.env.LAMBDA_TASK_ROOT ? "/tmp/pak-monitor-data" : join(process.cwd(), "data"));
 const DB_FILE = join(DATA_DIR, "db.json");

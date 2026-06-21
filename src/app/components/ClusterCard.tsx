@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import type { Cluster } from "@/lib/cluster";
 import { sourceColor } from "@/config/sources";
 import ArticleCard from "./ArticleCard";
@@ -22,14 +22,13 @@ export default function ClusterCard({
 }) {
   const [open, setOpen] = useState(false);
   const multi = cluster.sources.length > 1;
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (focused) ref.current?.scrollIntoView({ block: "nearest" });
-  }, [focused]);
 
   return (
-    <div ref={ref} role="listitem" className={focused ? "rounded-lg ring-2 ring-accent/70" : undefined}>
+    <div
+      role="listitem"
+      data-focused={focused ? "true" : undefined}
+      className={focused ? "rounded-lg ring-2 ring-accent/70" : undefined}
+    >
       <ArticleCard
         article={cluster.lead}
         now={now}

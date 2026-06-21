@@ -112,6 +112,9 @@ export default function Dashboard() {
   const clustersRef = useRef<Cluster[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
   const feedScrollRef = useRef<HTMLDivElement>(null);
+  // True only while handling a j/k keypress, so the cursor effect scrolls the
+  // focused card into view on real keyboard nav — never on load / filter reset.
+  const keyNavRef = useRef(false);
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
   const seenRef = useRef<Set<string>>(new Set());
@@ -375,6 +378,18 @@ export default function Dashboard() {
     feedScrollRef.current?.scrollTo({ top: 0 });
   }, [selectedCategories]);
 
+  // Scroll the focused cluster into view only when the cursor moved via the
+  // keyboard (j/k). On load / filter changes the cursor resets to 0 without a
+  // keypress, so we leave the scroll alone and the reset-to-top above wins —
+  // otherwise a fresh ?cat= load would jump past the topic panel to article 1.
+  useEffect(() => {
+    if (!keyNavRef.current) return;
+    keyNavRef.current = false;
+    feedScrollRef.current
+      ?.querySelector('[data-focused="true"]')
+      ?.scrollIntoView({ block: "nearest" });
+  }, [cursor]);
+
   const flush = useCallback(() => {
     setArticles((prev) => [...buffer, ...prev].slice(0, MAX_RENDERED));
     setBuffer([]);
@@ -470,9 +485,11 @@ export default function Dashboard() {
       const list = clustersRef.current;
       if (e.key === "j") {
         e.preventDefault();
+        keyNavRef.current = true;
         setCursor((c) => Math.min(c + 1, Math.max(0, list.length - 1)));
       } else if (e.key === "k") {
         e.preventDefault();
+        keyNavRef.current = true;
         setCursor((c) => Math.max(c - 1, 0));
       } else if (e.key === "o" || e.key === "Enter") {
         const c = list[cursorRef.current];

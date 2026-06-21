@@ -1,7 +1,7 @@
 // Single source of truth for the canonical site URL + branding, reused by
 // metadata, sitemap, robots and structured data.
 
-export const SITE_URL = "https://pak-monitor.pages.dev";
+export const SITE_URL = "https://pak-monitor.com";
 export const SITE_NAME = "Pak Monitor";
 export const SITE_TAGLINE = "Realtime Pakistan City News";
 export const SITE_DESCRIPTION =

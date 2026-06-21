@@ -656,7 +656,11 @@ export default function Dashboard() {
       {/* Main */}
       <main
         className={[
-          "grid min-h-0 flex-1",
+          // Explicit single mobile column: without it the implicit `auto`
+          // grid track sizes to max-content and overflows narrow viewports
+          // (clipping the right edge under the root's overflow-hidden). The
+          // lg: column templates override this on desktop.
+          "grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)]",
           mapOpen
             ? "grid-rows-[minmax(180px,36%)_1fr] lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:grid-rows-1"
             : "grid-rows-1 lg:grid-cols-1",

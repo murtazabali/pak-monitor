@@ -28,6 +28,7 @@ import AdUnit from "./AdUnit";
 import { ADSENSE_SLOTS, SNAPSHOT_URL } from "@/config/site";
 import { useLocalStorage } from "./hooks";
 import { notify, playPing } from "./alerts";
+import { track } from "./analytics";
 
 const MAX_RENDERED = 300;
 const CITIES_KEY = "pak-monitor:cities";
@@ -98,7 +99,9 @@ export default function Dashboard() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [loading, setLoading] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [mapOpen, setMapOpen] = useLocalStorage<boolean>("pak-monitor:map", true);
+  // Feed-first by default; the map is an opt-in desktop flourish (hidden on
+  // mobile). Existing visitors keep whatever they last chose.
+  const [mapOpen, setMapOpen] = useLocalStorage<boolean>("pak-monitor:map", false);
   const [spikes, setSpikes] = useState<Stats["spikes"]>([]);
   const [snapshotStats, setSnapshotStats] = useState<Stats | null>(null);
   const [snapshotTopics, setSnapshotTopics] = useState<Record<string, unknown>>({});
@@ -641,7 +644,10 @@ export default function Dashboard() {
             cities={CITIES}
             selected={selectedCities}
             counts={cityChipCounts}
-            onToggle={toggleCity}
+            onToggle={(slug) => {
+              track("chip_city_select", { city: slug });
+              toggleCity(slug);
+            }}
             onSelectAll={() => setSelectedCities([])}
           />
         </div>
@@ -656,24 +662,26 @@ export default function Dashboard() {
       {/* Main */}
       <main
         className={[
-          // Explicit single mobile column: without it the implicit `auto`
-          // grid track sizes to max-content and overflows narrow viewports
-          // (clipping the right edge under the root's overflow-hidden). The
-          // lg: column templates override this on desktop.
-          "grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)]",
-          mapOpen
-            ? "grid-rows-[minmax(180px,36%)_1fr] lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:grid-rows-1"
-            : "grid-rows-1 lg:grid-cols-1",
+          // The map is desktop-only, so mobile is always a single feed column
+          // (grid-rows-1). On desktop, opening the map splits into a 5/7
+          // map+feed grid. The explicit minmax(0,1fr) base column also keeps
+          // the implicit `auto` track from overflowing narrow viewports under
+          // the root's overflow-hidden.
+          "grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-1",
+          mapOpen ? "lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]" : "lg:grid-cols-1",
         ].join(" ")}
       >
         {/* Map panel */}
-        <section className={`grid-bg relative min-h-0 border-b border-edge/70 lg:border-b-0 lg:border-r ${mapOpen ? "" : "hidden"}`}>
+        <section className={`grid-bg relative hidden min-h-0 border-b border-edge/70 lg:border-b-0 lg:border-r ${mapOpen ? "lg:block" : ""}`}>
           <div className="absolute left-4 top-3 z-10">
             <p className="font-mono text-[10px] uppercase tracking-widest text-muted">Live map</p>
             <p className="max-w-[16rem] truncate text-sm font-medium text-slate-200">{scopeLabel}</p>
           </div>
           <button
-            onClick={() => setMapOpen(false)}
+            onClick={() => {
+              track("map_toggle", { action: "hide" });
+              setMapOpen(false);
+            }}
             title="Hide map"
             className="absolute right-3 top-3 z-10 rounded-md border border-base-600 bg-base-900/70 px-2 py-1 text-xs text-muted hover:text-accent"
           >
@@ -685,7 +693,10 @@ export default function Dashboard() {
               selected={selectedCities}
               counts={cityChipCounts}
               pulsing={pulsing}
-              onToggle={toggleCity}
+              onToggle={(slug) => {
+                track("map_city_select", { city: slug });
+                toggleCity(slug);
+              }}
             />
           </div>
           <p className="absolute bottom-2 left-4 font-mono text-[10px] text-muted/70">
@@ -697,8 +708,11 @@ export default function Dashboard() {
         <section className="relative flex min-h-0 flex-col bg-base-900/40">
           {!mapOpen && (
             <button
-              onClick={() => setMapOpen(true)}
-              className="flex w-full items-center gap-1.5 border-b border-edge/60 px-4 py-1.5 text-xs text-muted hover:text-accent"
+              onClick={() => {
+                track("map_toggle", { action: "show" });
+                setMapOpen(true);
+              }}
+              className="hidden w-full items-center gap-1.5 border-b border-edge/60 px-4 py-1.5 text-xs text-muted hover:text-accent lg:flex"
             >
               🗺 Show map
             </button>

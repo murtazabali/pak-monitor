@@ -23,6 +23,10 @@ export const CONTACT_EMAIL = "murtaza_fakhruddin@outlook.com";
 // Google AdSense publisher ID.
 export const ADSENSE_CLIENT = "ca-pub-9118158293508962";
 
+// Google Analytics 4 measurement ID. Loaded only when non-empty, so forks /
+// local builds don't report to this property. NEXT_PUBLIC_GA_ID overrides it.
+export const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_ID || "G-CYPLQF7JEX";
+
 // Ad-unit slot IDs. Leave "" and ad slots render nothing (so there are no
 // empty ad boxes before approval). After AdSense approves the site, create
 // units under Ads → By ad unit and paste their slot IDs here to switch them on.

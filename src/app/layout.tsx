@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import Script from "next/script";
 import "./globals.css";
 import PWARegister from "./components/PWARegister";
-import { SITE_URL, SITE_NAME, SITE_TAGLINE, SITE_DESCRIPTION, ADSENSE_CLIENT } from "@/config/site";
+import { SITE_URL, SITE_NAME, SITE_TAGLINE, SITE_DESCRIPTION, ADSENSE_CLIENT, GA_MEASUREMENT_ID } from "@/config/site";
 import { TOPICS } from "@/config/topics";
 
 export const metadata: Metadata = {
@@ -97,6 +97,24 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="font-sans">
         {children}
         <PWARegister />
+        {GA_MEASUREMENT_ID && (
+          <>
+            <Script
+              id="ga-src"
+              async
+              strategy="afterInteractive"
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+            />
+            <Script id="ga-init" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${GA_MEASUREMENT_ID}');
+              `}
+            </Script>
+          </>
+        )}
         <Script
           id="adsbygoogle-init"
           async

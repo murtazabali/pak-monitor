@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import type { FifaGoal, FifaMatch, FifaSnapshot } from "@/lib/types";
+import { parseScoreboard, scoreboardUrl } from "@/lib/topics/fifa";
 
 function kickoff(iso: string): string {
   const ms = Date.parse(iso);
@@ -111,7 +113,57 @@ function Section({ title, accent, matches, empty }: { title: string; accent: str
  * topic's snapshot data. Graceful placeholder when missing.
  */
 export default function FifaPanel({ data }: { data: unknown }) {
-  const fifa = (data ?? null) as FifaSnapshot | null;
+  const snapshot = (data ?? null) as FifaSnapshot | null;
+  // Live overlay polled straight from ESPN during match windows.
+  const [live, setLive] = useState<FifaSnapshot | null>(null);
+
+  // Are we around match time? A live match, a kickoff within the next ~15 min,
+  // or one that kicked off in the last ~3h (still settling). Derived from the
+  // snapshot baseline — NOT our own poll result — so the effect below doesn't
+  // restart on every successful poll.
+  const inMatchWindow = useMemo(() => {
+    if (!snapshot) return false;
+    if (snapshot.live.length > 0) return true;
+    const now = Date.now();
+    return [...snapshot.upcoming, ...snapshot.recent].some((m) => {
+      const t = Date.parse(m.date);
+      return Number.isFinite(t) && now >= t - 15 * 60_000 && now <= t + 3 * 60 * 60_000;
+    });
+  }, [snapshot]);
+
+  // ESPN's scoreboard is CORS-open and cached ~9s, so the browser can poll it
+  // directly — no backend. Poll every 30s only inside a match window; outside
+  // one the 5-min snapshot is fresh enough and we never touch ESPN. Keeps the
+  // last good data on error, and drops the overlay once the window ends.
+  useEffect(() => {
+    if (!inMatchWindow) {
+      setLive(null);
+      return;
+    }
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const res = await fetch(scoreboardUrl(), { cache: "no-store" });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (cancelled) return;
+        const parsed = parseScoreboard(json);
+        if (parsed.live.length || parsed.recent.length || parsed.upcoming.length) {
+          setLive({ ...parsed, asOf: new Date().toISOString() });
+        }
+      } catch {
+        /* network blip — keep the last good data */
+      }
+    };
+    poll();
+    const id = setInterval(poll, 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [inMatchWindow]);
+
+  const fifa = live ?? snapshot;
 
   if (!fifa) {
     return (
@@ -122,6 +174,7 @@ export default function FifaPanel({ data }: { data: unknown }) {
     );
   }
 
+  const livePolling = live !== null && fifa.live.length > 0;
   const asOfLabel = new Date(fifa.asOf).toLocaleString(undefined, {
     day: "numeric",
     month: "short",
@@ -140,7 +193,10 @@ export default function FifaPanel({ data }: { data: unknown }) {
             </span>
           )}
         </p>
-        <p className="font-mono text-[11px] text-muted">updated {asOfLabel}</p>
+        <p className="font-mono text-[11px] text-muted">
+          {livePolling && <span className="font-semibold text-signal-live">● LIVE · </span>}
+          updated {asOfLabel}
+        </p>
       </div>
 
       {fifa.live.length > 0 && (
@@ -153,7 +209,7 @@ export default function FifaPanel({ data }: { data: unknown }) {
       </div>
 
       <p className="font-mono text-[10px] text-muted/70">
-        Source: ESPN · times shown in your local timezone.
+        Source: ESPN · live during matches · times shown in your local timezone.
       </p>
     </div>
   );

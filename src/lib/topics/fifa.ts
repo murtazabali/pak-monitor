@@ -9,7 +9,6 @@ import type { FifaGoal, FifaMatch, FifaSnapshot, FifaTeam } from "@/lib/types";
 
 const LEAGUE = "fifa.world"; // ESPN slug for the men's FIFA World Cup
 const BASE = `https://site.api.espn.com/apis/site/v2/sports/soccer/${LEAGUE}/scoreboard`;
-const TIMEOUT_MS = Number(process.env.FIFA_TIMEOUT_MS) || 15_000;
 const RECENT_N = 8;
 const UPCOMING_N = 10;
 const USER_AGENT =
@@ -134,15 +133,25 @@ function yyyymmdd(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10).replace(/-/g, "");
 }
 
+/**
+ * ESPN scoreboard URL for a rolling window: recent results (~2 weeks back) +
+ * upcoming fixtures (~7 weeks forward). Shared by the cron fetch and the
+ * browser live-poller so both request the same set of matches.
+ */
+export function scoreboardUrl(now: number = Date.now()): string {
+  const dates = `${yyyymmdd(now - 14 * DAY_MS)}-${yyyymmdd(now + 49 * DAY_MS)}`;
+  return `${BASE}?dates=${dates}`;
+}
+
 export async function getData(): Promise<FifaSnapshot | null> {
+  const TIMEOUT_MS = Number(process.env.FIFA_TIMEOUT_MS) || 15_000;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
     // A rolling window: recent results (back ~2 weeks) + all upcoming fixtures
     // (forward ~7 weeks, covering the rest of the tournament).
     const now = Date.now();
-    const dates = `${yyyymmdd(now - 14 * DAY_MS)}-${yyyymmdd(now + 49 * DAY_MS)}`;
-    const res = await fetch(`${BASE}?dates=${dates}`, {
+    const res = await fetch(scoreboardUrl(now), {
       headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
       signal: ctrl.signal,
     });

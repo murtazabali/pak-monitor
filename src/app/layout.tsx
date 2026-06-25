@@ -5,6 +5,7 @@ import "./globals.css";
 import PWARegister from "./components/PWARegister";
 import { SITE_URL, SITE_NAME, SITE_TAGLINE, SITE_DESCRIPTION, ADSENSE_CLIENT, GA_MEASUREMENT_ID } from "@/config/site";
 import { TOPICS } from "@/config/topics";
+import { Analytics } from '@vercel/analytics/next';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -97,6 +98,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="font-sans">
         {children}
         <PWARegister />
+        <Analytics />
         {GA_MEASUREMENT_ID && (
           <>
             <Script

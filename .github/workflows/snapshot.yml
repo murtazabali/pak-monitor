@@ -51,3 +51,25 @@ jobs:
           tree=$(printf '100644 blob %s\tsnapshot.json\n' "$blob" | git mktree)
           commit=$(git commit-tree "$tree" -m "data: refresh snapshot [skip ci]")
           git push -f origin "$commit:refs/heads/data"
+
+      - name: Refresh the deployed SSR content (hourly)
+        env:
+          VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: |
+          # The pages bake a snapshot into their HTML at BUILD time (so crawlers /
+          # AdSense / no-JS visitors get real content). That baked copy only
+          # refreshes when the site rebuilds — so ping a Vercel deploy hook to
+          # rebuild periodically. The live client feed covers the in-between, and
+          # a rebuild every 5 min would blow past Hobby build limits, so fire just
+          # once an hour. No-op until the VERCEL_DEPLOY_HOOK secret is set.
+          if [ -z "$VERCEL_DEPLOY_HOOK" ]; then
+            echo "VERCEL_DEPLOY_HOOK not set — skipping rebuild (baked content refreshes on the next push to main)."
+            exit 0
+          fi
+          minute=$(date -u +%M)
+          if [ "$((10#$minute))" -ge 5 ]; then
+            echo "Not the top of the hour (minute=$minute) — skipping rebuild."
+            exit 0
+          fi
+          echo "Triggering a Vercel rebuild so the baked SSR content refreshes…"
+          curl -fsS -X POST "$VERCEL_DEPLOY_HOOK" > /dev/null && echo "Rebuild triggered."

@@ -69,7 +69,17 @@ function singleton(a: Article): Cluster {
   return { id: a.id, lead: a, articles: [a], sources: [a.source] };
 }
 
-export default function Dashboard() {
+export default function Dashboard({
+  initialArticles = [],
+  initialNow,
+}: {
+  // Headlines baked into the HTML at build time (server-rendered for crawlers /
+  // no-JS), replaced by the live snapshot once the client connects.
+  initialArticles?: Article[];
+  // Snapshot timestamp used as the first-render "now" so server and client agree
+  // on relative timestamps (no hydration mismatch on the baked cards).
+  initialNow?: number;
+} = {}) {
   // URL-synced filters
   // Default to All Pakistan (empty = no city filter); users can narrow to cities.
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
@@ -89,12 +99,12 @@ export default function Dashboard() {
   const [savedViews, setSavedViews] = useLocalStorage<SavedView[]>("pak-monitor:views", []);
 
   // Live data
-  const [articles, setArticles] = useState<Article[]>([]);
+  const [articles, setArticles] = useState<Article[]>(initialArticles);
   const [buffer, setBuffer] = useState<Article[]>([]);
   const [paused, setPaused] = useState(false);
   const [status, setStatus] = useState<ConnStatus>("connecting");
   const [pulsing, setPulsing] = useState<Set<string>>(() => new Set());
-  const [nowTick, setNowTick] = useState(() => Date.now());
+  const [nowTick, setNowTick] = useState(() => initialNow ?? Date.now());
   const [statsOpen, setStatsOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -831,6 +841,7 @@ export default function Dashboard() {
             )}
             <FeedList
               clusters={clusters}
+              initialNow={initialNow}
               isRead={isRead}
               watch={watchlist}
               onOpen={markRead}

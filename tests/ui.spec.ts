@@ -122,6 +122,10 @@ test.describe("Dashboard UI", () => {
 
     // Defaults to All Pakistan (no city pre-selected); the city chips still render.
     await expect(page.getByRole("button", { name: /^Karachi/ })).toBeVisible();
+
+    // The map is collapsed by default (feed-first); open it to reveal the scope
+    // label and the map itself.
+    await page.getByRole("button", { name: /Show map/ }).click();
     await expect(page.getByRole("main").getByText("All Pakistan")).toBeVisible();
 
     // Backlog articles render.
@@ -249,6 +253,8 @@ test.describe("Dashboard UI", () => {
   test("selecting cities updates the live scope label", async ({ page }) => {
     await mockApi(page);
     await page.goto("/");
+    // The scope label lives in the map panel, collapsed by default — open it.
+    await page.getByRole("button", { name: /Show map/ }).click();
     // Defaults to All Pakistan; pick two cities to get a unique combined label.
     await page.getByRole("button", { name: /^Karachi/ }).click();
     await page.getByRole("button", { name: /^Lahore/ }).click();
@@ -429,7 +435,8 @@ test.describe("City detail page", () => {
     const article = makeArticle({ id: "cp1", title: "Karachi city page test headline" });
     await mockApi(page, { backlog: [article] });
     await page.goto("/city/karachi");
-    await expect(page.getByRole("heading", { name: "Karachi" })).toBeVisible();
+    // exact: true targets the <h1>Karachi</h1>, not the "About Karachi news" <h2>.
+    await expect(page.getByRole("heading", { name: "Karachi", exact: true })).toBeVisible();
     await expect(page.getByText(article.title)).toBeVisible();
   });
 });

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Article, Stats } from "@/lib/types";
 import { CATEGORY_BY_SLUG } from "@/config/categories";
+import { CITY_INTROS } from "@/config/cityIntros";
 import ArticleCard from "@/app/components/ArticleCard";
 import Sparkline from "@/app/components/Sparkline";
 import SiteFooter from "@/app/components/SiteFooter";
@@ -26,14 +27,25 @@ export default function CityView({
   slug,
   name,
   province,
+  initialArticles = [],
+  initialNow,
 }: {
   slug: string;
   name: string;
   province: string;
+  // Headlines baked into the HTML at build time (server-rendered for crawlers /
+  // no-JS), replaced by the live snapshot once the client connects.
+  initialArticles?: Article[];
+  // Snapshot timestamp used as the first-render "now" (no hydration mismatch on
+  // the baked cards' relative timestamps).
+  initialNow?: number;
 }) {
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [stats, setStats] = useState<Pick<Stats, "total" | "perHour" | "byCategory"> | null>(null);
-  const [now, setNow] = useState(() => Date.now());
+  const baseNow = initialNow ?? Date.now();
+  const [articles, setArticles] = useState<Article[]>(initialArticles);
+  const [stats, setStats] = useState<Pick<Stats, "total" | "perHour" | "byCategory"> | null>(() =>
+    initialArticles.length ? cityStats(initialArticles, baseNow) : null,
+  );
+  const [now, setNow] = useState(() => baseNow);
 
   useEffect(() => {
     let cancel = false;
@@ -100,6 +112,13 @@ export default function CityView({
               );
             })}
         </div>
+      )}
+
+      {CITY_INTROS[slug] && (
+        <section className="mb-6">
+          <h2 className="mb-1.5 font-mono text-sm font-semibold text-slate-200">About {name} news</h2>
+          <p className="max-w-2xl text-sm leading-relaxed text-slate-400">{CITY_INTROS[slug]}</p>
+        </section>
       )}
 
       <div className="flex flex-col gap-2">

@@ -11,12 +11,18 @@ interface Props {
   onOpen: (id: string) => void;
   focusedId?: string;
   emptyHint?: string;
+  /** Deterministic first-render "now" for build-time baked cards (avoids a
+   *  hydration mismatch on the "x min ago" labels). */
+  initialNow?: number;
 }
 
-export default function FeedList({ clusters, isRead, watch, onOpen, focusedId, emptyHint }: Props) {
-  // Re-tick every 60s so the "x min ago" labels stay fresh.
-  const [now, setNow] = useState(() => Date.now());
+export default function FeedList({ clusters, isRead, watch, onOpen, focusedId, emptyHint, initialNow }: Props) {
+  // Seed from the snapshot time (when rendering baked cards) so the server and
+  // first client render agree; re-tick every 60s so the "x min ago" labels stay
+  // fresh — and correct to the real clock immediately after mount.
+  const [now, setNow] = useState(() => initialNow ?? Date.now());
   useEffect(() => {
+    setNow(Date.now());
     const t = setInterval(() => setNow(Date.now()), 60_000);
     return () => clearInterval(t);
   }, []);

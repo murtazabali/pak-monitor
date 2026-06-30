@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Article, Stats } from "@/lib/types";
 import { CATEGORY_BY_SLUG } from "@/config/categories";
+import { CITY_INTROS } from "@/config/cityIntros";
 import ArticleCard from "@/app/components/ArticleCard";
 import Sparkline from "@/app/components/Sparkline";
 import SiteFooter from "@/app/components/SiteFooter";
@@ -111,6 +112,13 @@ export default function CityView({
               );
             })}
         </div>
+      )}
+
+      {CITY_INTROS[slug] && (
+        <section className="mb-6">
+          <h2 className="mb-1.5 font-mono text-sm font-semibold text-slate-200">About {name} news</h2>
+          <p className="max-w-2xl text-sm leading-relaxed text-slate-400">{CITY_INTROS[slug]}</p>
+        </section>
       )}
 
       <div className="flex flex-col gap-2">

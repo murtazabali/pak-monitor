@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CITIES, CITY_BY_SLUG } from "@/config/cities";
 import { SITE_NAME } from "@/config/site";
+import { loadBuildSnapshot } from "@/lib/buildSnapshot";
 import CityView from "./CityView";
 
 export function generateStaticParams() {
@@ -45,5 +46,22 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const city = CITY_BY_SLUG[slug];
   if (!city) notFound();
-  return <CityView slug={city.slug} name={city.name} province={city.province} />;
+
+  // Bake this city's latest headlines into the static HTML (crawlers / AdSense /
+  // no-JS); the client refreshes from the live snapshot on mount.
+  const { articles, now } = await loadBuildSnapshot();
+  const initialArticles = articles
+    .filter((a) => a.cities?.includes(city.slug))
+    .sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt))
+    .slice(0, 60);
+
+  return (
+    <CityView
+      slug={city.slug}
+      name={city.name}
+      province={city.province}
+      initialArticles={initialArticles}
+      initialNow={now}
+    />
+  );
 }

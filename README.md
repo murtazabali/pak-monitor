@@ -64,10 +64,12 @@ A browser can't fetch news RSS directly (CORS), so the feeds are pulled **off-br
                                                    │
                                                    ▼
         Static site on Vercel            ──reads──▶  snapshot.json
-        dashboard · city pages · digest  (all rendered in the browser)
+        dashboard · city pages · digest  (live-updated in the browser)
 ```
 
 Because data refreshes live on a separate `data` branch (force-pushed as one commit), **the host only ever rebuilds when the code changes** — data updates cost nothing and never bloat git history.
+
+**Server-rendered baseline (for crawlers, SEO & AdSense).** The home and city pages also read the latest snapshot **at build time** and bake the newest ~60 headlines straight into the static HTML ([`src/lib/buildSnapshot.ts`](src/lib/buildSnapshot.ts)). So the shipped page has real content even with JavaScript disabled; the browser then hydrates and switches to the live feed. To keep that baked baseline fresh, set a Vercel **Deploy Hook** URL as the `VERCEL_DEPLOY_HOOK` repo secret — the snapshot workflow pings it ~once an hour to rebuild (the live client feed covers the in-between). Without the secret, the baked content simply refreshes on the next push to `main`.
 
 ## 🧱 Tech stack
 

@@ -141,12 +141,20 @@ export default function FifaPanel({ data }: { data: unknown }) {
       return;
     }
     let cancelled = false;
+    // Responses can resolve out of order (latency jitter, ESPN's ~9s CDN cache):
+    // an older poll landing after a newer one would clobber fresh scores with
+    // stale data. Tag each request and never apply one older than the newest
+    // response we've already processed.
+    let issued = 0;
+    let newestSeen = 0;
     const poll = async () => {
+      const seq = ++issued;
       try {
         const res = await fetch(scoreboardUrl(), { cache: "no-store" });
         if (!res.ok) return;
         const json = await res.json();
-        if (cancelled) return;
+        if (cancelled || seq < newestSeen) return;
+        newestSeen = seq;
         const parsed = parseScoreboard(json);
         if (parsed.live.length || parsed.recent.length || parsed.upcoming.length) {
           setLive({ ...parsed, asOf: new Date().toISOString() });
@@ -163,7 +171,13 @@ export default function FifaPanel({ data }: { data: unknown }) {
     };
   }, [inMatchWindow]);
 
-  const fifa = live ?? snapshot;
+  // Show whichever source is actually newer. The live poll is normally freshest,
+  // but the snapshot baseline refreshes periodically (home page), so a stale
+  // retained overlay must never outrank a fresher snapshot.
+  const fifa =
+    live && (!snapshot || Date.parse(snapshot.asOf) <= Date.parse(live.asOf))
+      ? live
+      : snapshot;
 
   if (!fifa) {
     return (

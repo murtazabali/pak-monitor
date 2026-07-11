@@ -15,6 +15,9 @@ export default function SiteFooter() {
           <Link href="/about" className="hover:text-accent">
             About
           </Link>
+          <Link href="/faq" className="hover:text-accent">
+            FAQ
+          </Link>
           <Link href="/privacy" className="hover:text-accent">
             Privacy
           </Link>

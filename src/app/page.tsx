@@ -1,4 +1,5 @@
 import Dashboard from "./components/Dashboard";
+import HomeEditorial from "./components/HomeEditorial";
 import { loadBuildSnapshot } from "@/lib/buildSnapshot";
 
 // Server component: bakes the latest headlines into the static HTML so crawlers,
@@ -10,5 +11,10 @@ export default async function Page() {
   const initialArticles = [...articles]
     .sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt))
     .slice(0, 60);
-  return <Dashboard initialArticles={initialArticles} initialNow={now} />;
+  return (
+    <>
+      <Dashboard initialArticles={initialArticles} initialNow={now} />
+      <HomeEditorial />
+    </>
+  );
 }

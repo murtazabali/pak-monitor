@@ -37,6 +37,11 @@ export interface TopicPageCopy {
   newsEmpty: string;
   /** Extra SEO keywords for the page. */
   keywords: string[];
+  /**
+   * Original, evergreen prose about the topic, rendered below the live panel.
+   * Gives the page unique written content (not just aggregated headlines).
+   */
+  about?: string[];
 }
 
 export interface TopicConfig {
@@ -86,6 +91,10 @@ export const TOPICS: TopicConfig[] = [
         "FIFA World Cup", "World Cup 2026", "World Cup fixtures",
         "World Cup results", "World Cup scores", "football news",
       ],
+      about: [
+        "The FIFA World Cup is the most-watched sporting event on earth, and the 2026 edition — hosted across the United States, Canada and Mexico and expanded to 48 teams — is the largest in the tournament's history. This page brings its fixtures, results and live scores together with the latest football headlines, so you can follow the tournament as it unfolds without hunting across sites.",
+        "Pakistan has no side in the finals, but football's global showpiece still draws a large following here alongside the European club game. The scores and fixtures on this page update automatically during match windows, drawn from a public sports data feed; the news feed below gathers World Cup and wider football coverage from Pakistani and international outlets.",
+      ],
     },
   },
   {
@@ -119,6 +128,10 @@ export const TOPICS: TopicConfig[] = [
         "KSE-100", "KSE 100 index", "PSX", "Pakistan Stock Exchange",
         "Pakistan stocks", "PSX market watch", "KSE-100 today",
         "Pakistan stock market news",
+      ],
+      about: [
+        "The Pakistan Stock Exchange (PSX) is the country's principal equities market, and its benchmark KSE-100 Index — made up of 100 leading companies by market capitalisation — is the number most closely watched as a barometer of investor sentiment. This page tracks that index live, alongside the trading day's biggest gainers and losers.",
+        "Share prices move on everything from interest-rate decisions and the value of the rupee to corporate results and global commodity prices, which is why market data and the wider business news sit side by side here. The figures update through each trading session, drawn from the exchange's own public data, while the feed below collects the latest stock-market and economy reporting from Pakistan's outlets.",
       ],
     },
   },

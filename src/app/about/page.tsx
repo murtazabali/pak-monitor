@@ -31,6 +31,36 @@ export default function AboutPage() {
         screen live.
       </p>
 
+      <h2>Where the news comes from</h2>
+      <p>
+        Sources are established Pakistani news organisations — national
+        newspapers, television and radio broadcasters, and specialist business
+        and sport outlets — chosen because they publish a public, machine-readable
+        feed and cover the cities and topics {SITE_NAME} follows. Every item is
+        attributed to its outlet by name and links straight back to the original
+        report; {SITE_NAME} shows only the headline and a short summary and never
+        reproduces a full article.
+      </p>
+
+      <h2>How often it updates</h2>
+      <p>
+        {SITE_NAME} re-reads its sources continuously through the day and shows new
+        stories within minutes of publication. The live indicator in the header
+        reflects the current connection, and the daily digest and city pages draw
+        on the same stream so what you see is always the latest available.
+      </p>
+
+      <h2>Editorial independence</h2>
+      <p>
+        {SITE_NAME} does not edit, rewrite or take a position on the stories it
+        links to — headlines and summaries appear as the original publisher wrote
+        them, and ranking is by time and by how many outlets are covering an
+        event, not by any editorial preference of ours. The original outlet holds
+        all copyright and editorial responsibility. If you believe something has
+        been mis-tagged, or you spot an error on the site itself, please tell us
+        via the <a href="/contact">contact page</a>.
+      </p>
+
       <h2>Cities we monitor</h2>
       <p>{SITE_NAME} currently tracks {CITIES.length} cities, including {CITIES.slice(0, 5).map((c) => c.name).join(", ")} and more.</p>
 
@@ -47,7 +77,8 @@ export default function AboutPage() {
       <h2>Contact</h2>
       <p>
         Questions, feedback or corrections are welcome — see the{" "}
-        <a href="/contact">contact page</a>. The site lives at{" "}
+        <a href="/contact">contact page</a>, or the{" "}
+        <a href="/faq">frequently asked questions</a> for the quick answers. The site lives at{" "}
         <a href={SITE_URL}>{SITE_URL.replace("https://", "")}</a>.
       </p>
     </PageShell>

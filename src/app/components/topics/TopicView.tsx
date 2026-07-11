@@ -52,17 +52,9 @@ export default function TopicView({ slug }: { slug: string }) {
 
   if (!topic) return null;
 
-  if (!snap) {
-    return (
-      <div className="mx-auto flex min-h-screen max-w-3xl flex-col px-4 py-6">
-        <Link href="/" className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-accent">
-          ← Back to monitor
-        </Link>
-        <p className="py-16 text-center text-sm text-muted">Loading…</p>
-      </div>
-    );
-  }
-
+  // The header + "About this page" editorial are static (config, not snapshot)
+  // and render unconditionally so they are in the server-rendered HTML for
+  // crawlers / AdSense — only the live panel and feed wait on the client fetch.
   return (
     <div className="mx-auto flex min-h-screen max-w-3xl flex-col px-4 py-6">
       <Link href="/" className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-accent">
@@ -76,20 +68,39 @@ export default function TopicView({ slug }: { slug: string }) {
       </header>
 
       <section className="mb-8">
-        <TopicPanel slug={topic.slug} data={snap.topics?.[topic.slug]} />
+        {snap ? (
+          <TopicPanel slug={topic.slug} data={snap.topics?.[topic.slug]} />
+        ) : (
+          <p className="py-8 text-center text-sm text-muted">Loading live data…</p>
+        )}
       </section>
+
+      {topic.page.about && topic.page.about.length > 0 && (
+        <section className="mb-8 space-y-3 text-sm leading-relaxed text-slate-400">
+          <h2 className="font-mono text-xs uppercase tracking-widest text-muted">
+            About this page
+          </h2>
+          {topic.page.about.map((p, i) => (
+            <p key={i}>{p}</p>
+          ))}
+        </section>
+      )}
 
       <section className="flex min-h-0 flex-1 flex-col">
         <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-muted">
           {topic.page.newsHeading}
         </h2>
-        <FeedList
-          clusters={clusters}
-          isRead={() => false}
-          watch={[]}
-          onOpen={() => {}}
-          emptyHint={topic.page.newsEmpty}
-        />
+        {snap ? (
+          <FeedList
+            clusters={clusters}
+            isRead={() => false}
+            watch={[]}
+            onOpen={() => {}}
+            emptyHint={topic.page.newsEmpty}
+          />
+        ) : (
+          <p className="py-8 text-center text-sm text-muted">Loading…</p>
+        )}
       </section>
 
       <AdUnit slot={ADSENSE_SLOTS.article} className="my-6 block" />

@@ -23,9 +23,7 @@ import StatsPanel from "./StatsPanel";
 import NotificationToggle from "./NotificationToggle";
 import SpikeBanner from "./SpikeBanner";
 import SavedViews, { type SavedView } from "./SavedViews";
-import SiteFooter from "./SiteFooter";
-import AdUnit from "./AdUnit";
-import { ADSENSE_SLOTS, SNAPSHOT_URL } from "@/config/site";
+import { SNAPSHOT_URL } from "@/config/site";
 import { useLocalStorage } from "./hooks";
 import { notify, playPing } from "./alerts";
 import { track } from "./analytics";
@@ -868,9 +866,6 @@ export default function Dashboard({
           )}
         </section>
       </main>
-
-      <AdUnit slot={ADSENSE_SLOTS.feed} className="mx-auto w-full max-w-3xl px-2" />
-      <SiteFooter />
 
       <StatsPanel
         open={statsOpen}
